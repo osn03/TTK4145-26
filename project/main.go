@@ -6,6 +6,7 @@ import "fmt"
 func main(){
 
     numFloors := 4
+    numElevs := 3
 
     elevio.Init("localhost:15657", numFloors)
     
