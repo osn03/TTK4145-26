@@ -1,24 +1,12 @@
 package elevator
 
+import (
+	"elevio"
+)
+
 const (
 	numFloors  = 4
 	numButtons = 3
-)
-
-type Dirn int
-
-const (
-	D_Down Dirn = iota - 1
-	D_Stop
-	D_Up
-)
-
-type Button int
-
-const (
-	B_HallUp Button = iota
-	B_HallDown
-	B_Cab
 )
 
 type ElevatorBehavior int
@@ -31,7 +19,7 @@ const (
 
 type Elevator struct {
 	floor    int
-	dirn     Dirn
+	dirn     elevio.MotorDirection
 	requests [numFloors][numButtons]int
 }
 
@@ -48,71 +36,28 @@ func elevator_behaviorToString(eb ElevatorBehavior) string {
 	}
 }
 
-const{
-	
-}
-
-
-func ElevatorFloorSensor() int {
-	// Calls the hardware to get the current floor
-	return elevatorHardwareGetFloorSensorSignal()
-}
-
-func ElevatorRequestButton(floor int, b Button) int {
-	// Returns 1 if button pressed, 0 otherwise
-	return elevatorHardwareGetButtonSignal(int(b), floor)
-}
-
-func ElevatorStopButton() int {
-	return elevatorHardwareGetStopSignal()
-}
-
-func ElevatorObstruction() int {
-	return elevatorHardwareGetObstructionSignal()
-}
-
-// ---- Output / actuators ----
-
-func ElevatorFloorIndicator(floor int) {
-	elevatorHardwareSetFloorIndicator(floor)
-}
-
-func ElevatorRequestButtonLight(floor int, b Button, on bool) {
-	val := 0
-	if on {
-		val = 1
-	}
-	elevatorHardwareSetButtonLamp(int(b), floor, val)
-}
-
-func ElevatorDoorLight(on bool) {
-	val := 0
-	if on {
-		val = 1
-	}
-	elevatorHardwareSetDoorOpenLamp(val)
-}
-
-func ElevatorStopButtonLight(on bool) {
-	val := 0
-	if on {
-		val = 1
-	}
-	elevatorHardwareSetStopLamp(val)
-}
-
-func ElevatorMotorDirection(d Dirn) {
-	elevatorHardwareSetMotorDirection(int(d))
-}
-func elevator_dirnToString(dirn Dirn) string {
+func elevator_dirnToString(dirn elevio.MotorDirection) string {
 	switch dirn {
-	case D_Down:
+	case elevio.D_Down:
 		return "Down"
-	case D_Up:
+	case elevio.D_Up:
 		return "Up"
-	case D_Stop:
+	case elevio.D_Stop:
 		return "Stop"
 	default:
 		return "undefined direction"
+	}
+}
+
+func elevator_buttonToString(button elevio.ButtonType) string {
+	switch button {
+	case elevio.BT_HallUp:
+		return "Hall Up"
+	case elevio.BT_HallDown:
+		return "Hall Down"
+	case elevio.BT_Cab:
+		return "Cab"
+	default:
+		return "undefined button"
 	}
 }
