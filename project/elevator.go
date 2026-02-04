@@ -2,6 +2,7 @@ package elevator
 
 import (
 	"elevio"
+	"fmt"
 )
 
 const (
@@ -21,9 +22,10 @@ type Elevator struct {
 	floor    int
 	dirn     elevio.MotorDirection
 	requests [numFloors][numButtons]int
+	behaviour ElevatorBehavior
 }
 
-func elevator_behaviorToString(eb ElevatorBehavior) string {
+func behaviorToString(eb ElevatorBehavior) string {
 	switch eb {
 	case EB_Idle:
 		return "EB_idle"
@@ -36,7 +38,7 @@ func elevator_behaviorToString(eb ElevatorBehavior) string {
 	}
 }
 
-func elevator_dirnToString(dirn elevio.MotorDirection) string {
+func dirnToString(dirn elevio.MotorDirection) string {
 	switch dirn {
 	case elevio.D_Down:
 		return "Down"
@@ -49,7 +51,7 @@ func elevator_dirnToString(dirn elevio.MotorDirection) string {
 	}
 }
 
-func elevator_buttonToString(button elevio.ButtonType) string {
+func buttonToString(button elevio.ButtonType) string {
 	switch button {
 	case elevio.BT_HallUp:
 		return "Hall Up"
@@ -60,4 +62,38 @@ func elevator_buttonToString(button elevio.ButtonType) string {
 	default:
 		return "undefined button"
 	}
+}
+
+
+func elevator_print(el Elevator){
+	fmt.Println("  +--------------------+")
+	fmt.Printf(
+		"  |floor = %-2d          |\n"+
+			"  |dirn  = %-12.12s|\n"+
+			"  |behav = %-12.12s|\n",
+		el.floor,
+		dirnToString(el.dirn),
+		behaviorToString(el.behaviour),
+	)
+	fmt.Println("  +--------------------+")
+	fmt.Println("  |  | up  | dn  | cab |")
+
+	for f := numFloors - 1; f >= 0; f-- {
+		fmt.Printf("  | %d", f)
+		for btn := 0; btn < numButtons; btn++ {
+			if (f == numFloors-1 && btn == int(elevio.BT_HallUp)) ||
+				(f == 0 && btn == int(elevio.BT_HallDown)) {
+				fmt.Print("|     ")
+			} else {
+				if el.requests[f][btn] != 0 {
+					fmt.Print("|  #  ")
+				} else {
+					fmt.Print("|  -  ")
+				}
+			}
+		}
+		fmt.Println("|")
+	}
+
+	fmt.Println("  +--------------------+")
 }
