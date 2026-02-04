@@ -74,3 +74,9 @@ func requestChooseDirection(e Elevator) DirnBehaviourPair {
 		return DirnBehaviourPair{D_stop, EB_idle}
 	}
 }
+
+func ShouldStop(e Elevator) bool {
+	switch e.Dirn {
+	case D_up:
+	}
+}
