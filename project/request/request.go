@@ -1,6 +1,6 @@
 package request
 
-import "Driver-go/elevio"
+import "project/elevio"
 
 type DirnBehaviourPair struct {
 	Dirn      Dirn

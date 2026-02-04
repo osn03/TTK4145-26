@@ -1,17 +1,16 @@
 package fsm
 
 import (
-	"Driver-go/elevio"
-	"elevator"
-	"ftm"
-	"time"
+	"fmt"
+	"project/elevator"
+	"project/elevio"
 )
 
-func SetAllLights(es Elevator){
-	for floor := 0; floor < numFloors;floor++{
-		for button := 0; button < elevio._numButtons; button++{
+func SetAllLights(es Elevator) {
+	for floor := 0; floor < numFloors; floor++ {
+		for button := 0; button < elevio._numButtons; button++ {
 			elevio.SetButtonLamp(elevio.ButtonType(button), floor, es.Requests[floor][button])
-		}	
+		}
 	}
 }
 
@@ -22,8 +21,8 @@ func fsm_onInitBetweenFloors(e *Elevator) {
 }
 
 func FSMOnRequestButtonPress(e *Elevator, floor int, btnType Button) {
-	fmt.Printf("\n\nFSMOnRequestButtonPress(%d, %s)\n", floor, ElevatorButtonToString(btnType))
-	ElevatorPrint(*e)
+	fmt.Printf("\n\nFSMOnRequestButtonPress(%d, %s)\n", floor, elevator.ButtonToString(btnType))
+	elevator.ElevatorPrint(*e)
 
 	switch e.Behaviour {
 	case EB_DoorOpen:
@@ -63,7 +62,6 @@ func FSMOnFloorArrival(e *Elevator, newFloor int) {
 	fmt.Printf("\n\nFSMOnFloorArrival(%d)\n", newFloor)
 	ElevatorPrint(*e)
 
-	
 	e.Floor = newFloor
 	ElevatorFloorIndicator(e.Floor)
 
@@ -73,13 +71,13 @@ func FSMOnFloorArrival(e *Elevator, newFloor int) {
 			ElevatorMotorDirection(D_Stop)
 
 			ElevatorDoorLight(1)
-			
+
 			*e = RequestsClearAtCurrentFloor(*e)
-			
+
 			TimerStart(e.Config.DoorOpenDurationSec)
-			
+
 			SetAllLights(*e)
-			
+
 			e.Behaviour = EB_DoorOpen
 		}
 	default:

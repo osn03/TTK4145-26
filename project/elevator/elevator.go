@@ -1,7 +1,7 @@
 package elevator
 
 import (
-	"elevio"
+	"project/elevio"
 	"fmt"
 )
 
@@ -51,7 +51,7 @@ func dirnToString(dirn elevio.MotorDirection) string {
 	}
 }
 
-func buttonToString(button elevio.ButtonType) string {
+func ButtonToString(button elevio.ButtonType) string {
 	switch button {
 	case elevio.BT_HallUp:
 		return "Hall Up"
