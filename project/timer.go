@@ -29,3 +29,5 @@ func TimerStop() {
 func TimerTimedOut() bool {
 	return timerActive && getWallTime().After(timerEndTime)
 }
+
+//test
