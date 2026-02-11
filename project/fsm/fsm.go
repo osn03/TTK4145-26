@@ -15,7 +15,7 @@ func SetAllLights(es Elevator) {
 }
 
 func fsm_onInitBetweenFloors(e *Elevator) {
-	elevator_motorDirection(D_Down)
+	elevio.SetMotorDirection(D_Down)
 	e.Dirn = D_Down
 	e.Behavior = EB_moving
 }

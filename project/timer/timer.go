@@ -7,12 +7,12 @@ var (
 	timerActive  bool
 )
 
-func getWallTime() time.Time {
+func GetWallTime() time.Time {
 	return time.Now()
 }
 
 func TimerStart(duration float64) {
-	timerEndTime = getWallTime().Add(
+	timerEndTime = GetWallTime().Add(
 		time.Duration(duration * float64(time.Second)),
 	)
 	timerActive = true
@@ -23,7 +23,7 @@ func TimerStop() {
 }
 
 func TimerTimedOut() bool {
-	return timerActive && getWallTime().After(timerEndTime)
+	return timerActive && GetWallTime().After(timerEndTime)
 }
 
 //test
