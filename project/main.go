@@ -33,7 +33,7 @@ func main() {
 		case a := <-drv_buttons:
 			fmt.Printf("%+v\n", a)
 			elevio.SetButtonLamp(a.Button, a.Floor, true)
-			fsm.FSMOnRequestButtonPress(&elevator, a.Floor, a.Button)
+			fsm.OnRequestButtonPress(&elevator, a.Floor, a.Button)
 
 		case a := <-drv_floors:
 			fmt.Printf("%+v\n", a)

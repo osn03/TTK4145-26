@@ -32,14 +32,14 @@ func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.Button
 		if request.ShouldClearImmediately(*e, floor, btnType) {
 			timer.Start(constant.DoorOpenDurationSec)
 		} else {
-			e.Requests[floor][btnType] = 1
+			e.Requests[floor][btnType] = true
 		}
 
 	case elevator.EB_Moving:
-		e.Requests[floor][btnType] = 1
+		e.Requests[floor][btnType] = true
 
 	case elevator.EB_Idle:
-		e.Requests[floor][btnType] = 1
+		e.Requests[floor][btnType] = true
 		pair := request.ChooseDirection(*e)
 		e.Dirn = pair.Dirn
 		e.Behaviour = pair.Behaviour
