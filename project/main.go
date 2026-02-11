@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"project/constant"
 	"project/elevator"
 	"project/elevio"
 	"project/fsm"
-	"project/constant"
+	"project/timer"
 )
 
 func main() {
@@ -22,11 +23,16 @@ func main() {
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
+	time_timeout := make(chan bool) //?
+
+	var elevator elevator.Elevator
+	fsm.OnInitBetweenFloors(&elevator)
 
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
+	go timer.TimedOut(time_timeout) //?
 
 	for {
 		select {
@@ -43,6 +49,10 @@ func main() {
 				d = elevio.MD_Up
 			}
 			elevio.SetMotorDirection(d)
+			fsm.OnFloorArrival(&elevator, a)
+		case a := <-time_timeout:
+			timer.Stop()
+			fsm.FSMOnDoorTimeout(&elevator)
 
 		case a := <-drv_obstr:
 			fmt.Printf("%+v\n", a)
