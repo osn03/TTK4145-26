@@ -24,7 +24,7 @@ func Above(e elevator.Elevator) bool {
 
 func Below(e elevator.Elevator) bool {
 	for f := 0; f < e.Floor; f++ {
-		for b := elevio.ButtonType(0); b < 3; b++ {
+		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
 			if e.Requests[f][b] {
 				return true
 			}

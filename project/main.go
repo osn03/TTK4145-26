@@ -49,6 +49,7 @@ func main() {
 				d = elevio.MD_Stop
 			}*/
 			fsm.OnFloorArrival(&elevator, a)
+
 		case a := <-time_timeout:
 			fmt.Printf("%+v\n", a)
 			timer.Stop()
@@ -67,8 +68,10 @@ func main() {
 			for f := 0; f < numFloors; f++ {
 				for b := elevio.ButtonType(0); b < 3; b++ {
 					elevio.SetButtonLamp(b, f, false)
+
 				}
 			}
+
 		}
 	}
 }
