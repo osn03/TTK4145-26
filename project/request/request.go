@@ -49,7 +49,7 @@ func ChooseDirection(e elevator.Elevator) DirnBehaviourPair {
 		if Above(e) {
 			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_Moving}
 		} else if Here(e) {
-			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_DoorOpen}
+			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_DoorOpen}
 		} else if Below(e) {
 			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_Moving}
 		}
@@ -59,7 +59,7 @@ func ChooseDirection(e elevator.Elevator) DirnBehaviourPair {
 		if Below(e) {
 			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_Moving}
 		} else if Here(e) {
-			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_DoorOpen}
+			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_DoorOpen}
 		} else if Above(e) {
 			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_Moving}
 		}

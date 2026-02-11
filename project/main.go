@@ -43,12 +43,11 @@ func main() {
 
 		case a := <-drv_floors:
 			fmt.Printf("%+v\n", a)
-			if a == numFloors-1 {
+			/*if a == numFloors-1 {
 				d = elevio.MD_Down
 			} else if a == 0 {
 				d = elevio.MD_Stop
-			}
-			elevio.SetMotorDirection(d)
+			}*/
 			fsm.OnFloorArrival(&elevator, a)
 		case a := <-time_timeout:
 			fmt.Printf("%+v\n", a)
