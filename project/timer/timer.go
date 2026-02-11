@@ -22,8 +22,10 @@ func Stop() {
 	timerActive = false
 }
 
-func TimedOut() bool {
-	return timerActive && GetWallTime().After(timerEndTime)
+func TimedOut(receiver chan<- bool) {
+	if timerActive && GetWallTime().After(timerEndTime) {
+		receiver <- true
+	}
 }
 
 //test

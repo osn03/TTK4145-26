@@ -12,7 +12,7 @@ import (
 func main() {
 
 	numFloors := constant.NumFloors
-	numElevs := constant.NumElevators
+	//numElevs := constant.NumElevators
 
 	elevio.Init("localhost:15657", numFloors)
 
