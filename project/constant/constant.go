@@ -1,4 +1,4 @@
-package init
+package constant
 
 const (
 	NumFloors  = 4
