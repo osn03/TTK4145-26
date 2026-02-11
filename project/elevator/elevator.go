@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	numFloors  = 4
-	numButtons = 3
+	NumFloors  = 4
+	NumButtons = 3
 )
 
 type ElevatorBehavior int
@@ -21,7 +21,7 @@ const (
 type Elevator struct {
 	Floor    int
 	Dirn     elevio.MotorDirection
-	Requests [numFloors][numButtons]bool
+	Requests [NumFloors][NumButtons]bool
 	Behaviour ElevatorBehavior
 }
 
@@ -40,11 +40,11 @@ func BehaviorToString(eb ElevatorBehavior) string {
 
 func DirnToString(dirn elevio.MotorDirection) string {
 	switch dirn {
-	case elevio.D_Down:
+	case elevio.MD_Down:
 		return "Down"
-	case elevio.D_Up:
+	case elevio.MD_Up:
 		return "Up"
-	case elevio.D_Stop:
+	case elevio.MD_Stop:
 		return "Stop"
 	default:
 		return "undefined direction"
@@ -65,27 +65,27 @@ func ButtonToString(button elevio.ButtonType) string {
 }
 
 
-func ElevatorPrint(el Elevator){
+func ElevatorPrint(e Elevator){
 	fmt.Println("  +--------------------+")
 	fmt.Printf(
 		"  |floor = %-2d          |\n"+
 			"  |dirn  = %-12.12s|\n"+
 			"  |behav = %-12.12s|\n",
-		el.floor,
-		DirnToString(el.dirn),
-		BehaviorToString(el.behaviour),
+		e.Floor,
+		DirnToString(e.Dirn),
+		BehaviorToString(e.Behaviour),
 	)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 
-	for f := numFloors - 1; f >= 0; f-- {
+	for f := NumFloors - 1; f >= 0; f-- {
 		fmt.Printf("  | %d", f)
-		for btn := 0; btn < numButtons; btn++ {
-			if (f == numFloors-1 && btn == int(elevio.BT_HallUp)) ||
+		for btn := 0; btn < NumButtons; btn++ {
+			if (f == NumFloors-1 && btn == int(elevio.BT_HallUp)) ||
 				(f == 0 && btn == int(elevio.BT_HallDown)) {
 				fmt.Print("|     ")
 			} else {
-				if el.requests[f][btn] != 0 {
+				if e.Requests[f][btn] {
 					fmt.Print("|  #  ")
 				} else {
 					fmt.Print("|  -  ")
