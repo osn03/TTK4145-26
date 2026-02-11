@@ -46,7 +46,7 @@ func main() {
 			if a == numFloors-1 {
 				d = elevio.MD_Down
 			} else if a == 0 {
-				d = elevio.MD_Up
+				d = elevio.MD_Stop
 			}
 			elevio.SetMotorDirection(d)
 			fsm.OnFloorArrival(&elevator, a)

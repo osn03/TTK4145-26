@@ -23,9 +23,13 @@ func Stop() {
 }
 
 func TimedOut(receiver chan<- bool) {
-	if timerActive && GetWallTime().After(timerEndTime) {
-		receiver <- true
+	for {
+		if timerActive && GetWallTime().After(timerEndTime) {
+				receiver <- true
+			}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
+
 
 //test
