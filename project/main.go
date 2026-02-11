@@ -2,14 +2,16 @@ package main
 
 import (
 	"fmt"
+	"project/elevator"
 	"project/elevio"
 	"project/fsm"
+	"project/constant"
 )
 
 func main() {
 
-	numFloors := 4
-	numElevs := 3
+	numFloors := constant.NumFloors
+	numElevs := constant.NumElevators
 
 	elevio.Init("localhost:15657", numFloors)
 

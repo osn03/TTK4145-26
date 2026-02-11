@@ -5,10 +5,6 @@ import (
 	"fmt"
 )
 
-const (
-	NumFloors  = 4
-	NumButtons = 3
-)
 
 type ElevatorBehavior int
 
