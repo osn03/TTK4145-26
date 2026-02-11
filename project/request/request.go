@@ -11,7 +11,7 @@ type DirnBehaviourPair struct {
 }
 
 func Above(e elevator.Elevator) bool {
-	for f := e.Floor + 1; f < elevator.numFloors; f++ {
+	for f := e.Floor + 1; f < elevator.NumFloors; f++ {
 		for b := elevio.ButtonType(0); b < 4; b++ {
 			if e.Requests[f][b] {
 				return true

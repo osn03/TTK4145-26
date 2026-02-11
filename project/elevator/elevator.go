@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	numFloors  = 4
-	numButtons = 3
+	NumFloors  = 4
+	NumButtons = 3
 )
 
 type ElevatorBehavior int
@@ -21,7 +21,7 @@ const (
 type Elevator struct {
 	Floor    int
 	Dirn     elevio.MotorDirection
-	Requests [numFloors][numButtons]bool
+	Requests [NumFloors][NumButtons]bool
 	Behaviour ElevatorBehavior
 }
 
@@ -78,10 +78,10 @@ func ElevatorPrint(e Elevator){
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 
-	for f := numFloors - 1; f >= 0; f-- {
+	for f := NumFloors - 1; f >= 0; f-- {
 		fmt.Printf("  | %d", f)
-		for btn := 0; btn < numButtons; btn++ {
-			if (f == numFloors-1 && btn == int(elevio.BT_HallUp)) ||
+		for btn := 0; btn < NumButtons; btn++ {
+			if (f == NumFloors-1 && btn == int(elevio.BT_HallUp)) ||
 				(f == 0 && btn == int(elevio.BT_HallDown)) {
 				fmt.Print("|     ")
 			} else {
