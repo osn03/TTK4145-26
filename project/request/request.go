@@ -1,27 +1,28 @@
 package request
 
 import "project/elevio"
+import "project/elevator"
 
 type DirnBehaviourPair struct {
-	Dirn      Dirn
-	Behaviour ElevatorBehaviour
+	Dirn      elevio.MotorDirection
+	Behaviour elevator.ElevatorBehavior
 }
 
-func requestAbove(e Elevator) bool {
-	for f := e.Floor + 1; f < numFloors; f++ {
+func Above(e elevator.Elevator) bool {
+	for f := e.Floor + 1; f < elevator.numFloors; f++ {
 		for b := elevio.ButtonType(0); b < 4; b++ {
-			if e.request(f, b) {
-				return true
+			if e.Requests[f][b]{
+				return true 
 			}
 		}
 	}
 	return false
 }
 
-func requestBelow(e Elevator) bool {
+func Below(e elevator.Elevator) bool {
 	for f := 0; f < e.Floor; f++ {
 		for b := elevio.ButtonType(0); b < 3; b++ {
-			if e.request(f, b) {
+			if e.Requests[f][b]{
 				return true
 			}
 		}
@@ -29,28 +30,28 @@ func requestBelow(e Elevator) bool {
 	return false
 }
 
-func requestHere(e Elevator) bool {
+func Here(e elevator.Elevator) bool {
 	for b := elevio.ButtonType(0); b < 3; b++ {
-		if e.request(e.Floor, b) {
+		if e.Requests[e.Floor][b]{
 			return true
 		}
 	}
 	return false
 }
-func requestChooseDirection(e Elevator) DirnBehaviourPair {
+func ChooseDirection(e elevator.Elevator) DirnBehaviourPair {
 	switch e.Dirn {
-	case D_up:
-		if requestAbove(e) {
-			return DirnBehaviourPair{D_up, EB_moving}
-		} else if requestHere(e) {
-			return DirnBehaviourPair{D_down, EB_doorOpen}
-		} else if requestBelow(e) {
-			return DirnBehaviourPair{D_down, EB_moving}
+	case elevio.MD_Up:
+		if Above(e) {
+			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_Moving}
+		} else if Here(e) {
+			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_DoorOpen}
+		} else if Below(e) {
+			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_Moving}
 		}
-		return DirnBehaviourPair{D_stop, EB_idle}
+		return DirnBehaviourPair{elevio.MD_Stop, elevator.EB_Idle}
 
-	case D_down:
-		if requestBelow(e) {
+	case elevio.MD_Down:
+		if Below(e) {
 			return DirnBehaviourPair{D_down, EB_moving}
 		} else if requestHere(e) {
 

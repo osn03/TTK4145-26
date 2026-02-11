@@ -19,10 +19,10 @@ const (
 )
 
 type Elevator struct {
-	floor    int
-	dirn     elevio.MotorDirection
-	requests [numFloors][numButtons]int
-	behaviour ElevatorBehavior
+	Floor    int
+	Dirn     elevio.MotorDirection
+	Requests [numFloors][numButtons]bool
+	Behaviour ElevatorBehavior
 }
 
 func BehaviorToString(eb ElevatorBehavior) string {
@@ -65,7 +65,7 @@ func ButtonToString(button elevio.ButtonType) string {
 }
 
 
-func Elevator_print(el Elevator){
+func ElevatorPrint(el Elevator){
 	fmt.Println("  +--------------------+")
 	fmt.Printf(
 		"  |floor = %-2d          |\n"+
