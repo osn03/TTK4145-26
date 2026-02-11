@@ -91,7 +91,7 @@ func OnFloorArrival(e *elevator.Elevator, newFloor int) {
 	elevator.ElevatorPrint(*e)
 }
 
-func FSMOnDoorTimeout(e *elevator.Elevator) {
+func OnDoorTimeout(e *elevator.Elevator) {
 	fmt.Println("\n\nFSMOnDoorTimeout()")
 	elevator.ElevatorPrint(*e)
 
