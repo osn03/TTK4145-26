@@ -40,11 +40,11 @@ func BehaviorToString(eb ElevatorBehavior) string {
 
 func DirnToString(dirn elevio.MotorDirection) string {
 	switch dirn {
-	case elevio.D_Down:
+	case elevio.MD_Down:
 		return "Down"
-	case elevio.D_Up:
+	case elevio.MD_Up:
 		return "Up"
-	case elevio.D_Stop:
+	case elevio.MD_Stop:
 		return "Stop"
 	default:
 		return "undefined direction"
@@ -65,15 +65,15 @@ func ButtonToString(button elevio.ButtonType) string {
 }
 
 
-func ElevatorPrint(el Elevator){
+func ElevatorPrint(e Elevator){
 	fmt.Println("  +--------------------+")
 	fmt.Printf(
 		"  |floor = %-2d          |\n"+
 			"  |dirn  = %-12.12s|\n"+
 			"  |behav = %-12.12s|\n",
-		el.floor,
-		DirnToString(el.dirn),
-		BehaviorToString(el.behaviour),
+		e.Floor,
+		DirnToString(e.Dirn),
+		BehaviorToString(e.Behaviour),
 	)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
@@ -85,7 +85,7 @@ func ElevatorPrint(el Elevator){
 				(f == 0 && btn == int(elevio.BT_HallDown)) {
 				fmt.Print("|     ")
 			} else {
-				if el.requests[f][btn] != 0 {
+				if e.Requests[f][btn] {
 					fmt.Print("|  #  ")
 				} else {
 					fmt.Print("|  -  ")
