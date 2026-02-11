@@ -3,6 +3,7 @@ package request
 import (
 	"project/elevator"
 	"project/elevio"
+	"project/constant"
 )
 
 type DirnBehaviourPair struct {
@@ -11,7 +12,7 @@ type DirnBehaviourPair struct {
 }
 
 func Above(e elevator.Elevator) bool {
-	for f := e.Floor + 1; f < elevator.NumFloors; f++ {
+	for f := e.Floor + 1; f < constant.NumFloors; f++ {
 		for b := elevio.ButtonType(0); b < 4; b++ {
 			if e.Requests[f][b] {
 				return true
