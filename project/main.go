@@ -17,7 +17,6 @@ func main() {
 
 	elevio.Init("localhost:15657", numFloors)
 
-
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
@@ -58,8 +57,11 @@ func main() {
 			fmt.Printf("%+v\n", a)
 			if a && e.Behaviour == elevator.EB_DoorOpen {
 				elevio.SetMotorDirection(elevio.MD_Stop)
+				timer.Start(10000000000)
 			} else {
-				elevio.SetMotorDirection(request.ChooseDirection(e).Dirn)
+				//elevio.SetMotorDirection(request.ChooseDirection(e).Dirn)
+				timer.Stop()
+				timer.Start(constant.DoorOpenDurationSec)
 			}
 
 		case a := <-drv_stop:

@@ -94,7 +94,7 @@ func OnFloorArrival(e *elevator.Elevator, newFloor int) {
 func OnDoorTimeout(e *elevator.Elevator) {
 	fmt.Println("\n\nFSMOnDoorTimeout()")
 	elevator.ElevatorPrint(*e)
-
+	
 	switch e.Behaviour {
 	case elevator.EB_DoorOpen:
 		pair := request.ChooseDirection(*e)
