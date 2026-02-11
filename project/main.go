@@ -51,8 +51,9 @@ func main() {
 			elevio.SetMotorDirection(d)
 			fsm.OnFloorArrival(&elevator, a)
 		case a := <-time_timeout:
+			fmt.Printf("%+v\n", a)
 			timer.Stop()
-			fsm.FSMOnDoorTimeout(&elevator)
+			fsm.OnDoorTimeout(&elevator)
 
 		case a := <-drv_obstr:
 			fmt.Printf("%+v\n", a)
