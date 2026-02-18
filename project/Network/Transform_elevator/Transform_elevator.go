@@ -4,6 +4,7 @@ import (
 	"Project/Network/bcast"
 	"Project/Network/peers"
 	"Project/elevator"
+	"Project/elevio"
 	"flag"
 	"fmt"
 	"time"
@@ -13,20 +14,33 @@ import (
 // Note that all members we want to transmit must be public. Any private members
 //
 //	will be received as zero-values.
-type Msg struct {
-	id int
-	Elevator elevator.Elevator
-	Status bool
+type ElevatorMsg struct {
+	Sender    int
+	Floor     int
+	Dirn      int
+	Requests  [constant.numFloors][constant.numButtons]bool
+	Behaviour int
+}
+func Transform_elevator(e elevator.Elevator, sender int) ElevatorMsg {
+	return ElevatorMsg{
+		Sender:    sender,
+		Floor:     e.Floor,
+		Dirn:      int(e.Dirn),
+		Requests:  e.Requests,
+		Behaviour: int(e.Behaviour),
+	}
+}
+func Transform_back(msg ElevatorMsg) elevator.Elevator {
+	return elevator.Elevator{
+		Floor:     msg.Floor,
+		Dirn:      elevio.MotorDirection(msg.Dirn),
+		Requests:  msg.Requests,
+		Behaviour: elevator.ElevatorBehavior(msg.Behaviour),
+	}
 }
 
-func Transform_elevator(elevator.Elevator){
-	
 
-
-}
-
-
-func Set_up() {
+func Set_up(e *elevator.Elevator, sender string) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id int
@@ -46,22 +60,22 @@ func Set_up() {
 	go peers.Receiver(15647, peerUpdateCh)
 
 	// We make channels for sending and receiving our custom data types
-	helloTx := make(chan Msg)
-	helloRx := make(chan Msg)
+	Tx := make(chan ElevatorMsg)
+	Rx := make(chan ElevatorMsg)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, helloTx)
-	go bcast.Receiver(16569, helloRx)
+	go bcast.Transmitter(16569, Tx)
+	go bcast.Receiver(16569, Rx)
 
 	// The example message. We just send one of these every second.
 	go func() {
-		helloMsg := Msg{id, elevator.Elevator{}, false}
-		for {
-			helloTx <- helloMsg
-			time.Sleep(1 * time.Second)
-		}
-	}()
+    	for {
+        msg := Transform_elevator(*e, id)
+        Tx <- msg
+        time.Sleep(100 * time.Millisecond)
+    }
+}()
 
 	fmt.Println("Started")
 	for {
@@ -72,11 +86,13 @@ func Set_up() {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
-		case a := <-helloRx:
-			if a.id == id {
+		case a := <-Rx:
+			if a.Sender == id {
 				continue
 			}
-			fmt.Printf("Received: %#v\n", a)
+			*e = Transform_back(a)
+
+
 		}
 	}
 }
