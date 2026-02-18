@@ -1,9 +1,9 @@
 package request
 
 import (
+	"project/constant"
 	"project/elevator"
 	"project/elevio"
-	"project/constant"
 )
 
 type DirnBehaviourPair struct {
@@ -13,6 +13,7 @@ type DirnBehaviourPair struct {
 
 func Above(e elevator.Elevator) bool {
 	for f := e.Floor + 1; f < constant.NumFloors; f++ {
+
 		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
 			if e.Requests[f][b] ==1 {
 				return true
@@ -24,8 +25,10 @@ func Above(e elevator.Elevator) bool {
 
 func Below(e elevator.Elevator) bool {
 	for f := 0; f < e.Floor; f++ {
+
 		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
 			if e.Requests[f][b] == 1 {
+
 				return true
 			}
 		}
@@ -52,7 +55,7 @@ func ChooseDirection(e elevator.Elevator) DirnBehaviourPair {
 		if Above(e) {
 			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_Moving}
 		} else if Here(e) {
-			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_DoorOpen}
+			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_DoorOpen}
 		} else if Below(e) {
 			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_Moving}
 		}
@@ -62,7 +65,7 @@ func ChooseDirection(e elevator.Elevator) DirnBehaviourPair {
 		if Below(e) {
 			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_Moving}
 		} else if Here(e) {
-			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_DoorOpen}
+			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_DoorOpen}
 		} else if Above(e) {
 			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_Moving}
 		}
