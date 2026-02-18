@@ -10,8 +10,8 @@ const numFloors int = constant.NumFloors
 const numButtons int = constant.NumButtons
 
 type ExternalElevator struct {
-	status   bool
-	elevator elevator.Elevator
+	Status   bool
+	Elevator elevator.Elevator
 }
 
 type WorldView struct {

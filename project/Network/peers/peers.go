@@ -1,9 +1,9 @@
 package peers
 
 import (
-	"Project/Network/conn"
 	"fmt"
 	"net"
+	"project/Network/conn"
 	"sort"
 	"time"
 )

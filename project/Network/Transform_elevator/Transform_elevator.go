@@ -1,11 +1,14 @@
 package Transform_elevator
 
 import (
-	"Project/Network/bcast"
-	"Project/Network/peers"
-	"Project/elevator"
 	"flag"
 	"fmt"
+	"project/Network/bcast"
+	"project/Network/peers"
+	"project/constant"
+	"project/elevator"
+	"project/elevio"
+	"project/esm"
 	"time"
 )
 
@@ -13,20 +16,39 @@ import (
 // Note that all members we want to transmit must be public. Any private members
 //
 //	will be received as zero-values.
-type Msg struct {
-	id int
-	Elevator elevator.Elevator
-	Status bool
+type ElevatorMsg struct {
+	Sender    int
+	Status    bool
+	Floor     int
+	Dirn      int
+	Requests  [constant.NumFloors][constant.NumButtons]int
+	Behaviour int
 }
 
-func Transform_elevator(elevator.Elevator){
-	
-
-
+func Transform_elevator(sender_id int, e esm.ExternalElevator) ElevatorMsg {
+	return ElevatorMsg{
+		Sender:    sender_id,
+		Status:    e.Status,
+		Floor:     e.Elevator.Floor,
+		Dirn:      int(e.Elevator.Dirn),
+		Requests:  e.Elevator.Requests,
+		Behaviour: int(e.Elevator.Behaviour),
+	}
+}
+func Transform_back(msg ElevatorMsg) (e esm.ExternalElevator, sender_id int) {
+	return esm.ExternalElevator{
+			Status: msg.Status,
+			Elevator: elevator.Elevator{
+				Floor:     msg.Floor,
+				Dirn:      elevio.MotorDirection(msg.Dirn),
+				Requests:  msg.Requests,
+				Behaviour: elevator.ElevatorBehavior(msg.Behaviour),
+			},
+		},
+		msg.Sender
 }
 
-
-func Set_up() {
+func Set_up(e *esm.ExternalElevator, sender string) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id int
@@ -46,20 +68,20 @@ func Set_up() {
 	go peers.Receiver(15647, peerUpdateCh)
 
 	// We make channels for sending and receiving our custom data types
-	helloTx := make(chan Msg)
-	helloRx := make(chan Msg)
+	Tx := make(chan ElevatorMsg)
+	Rx := make(chan ElevatorMsg)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, helloTx)
-	go bcast.Receiver(16569, helloRx)
+	go bcast.Transmitter(16569, Tx)
+	go bcast.Receiver(16569, Rx)
 
 	// The example message. We just send one of these every second.
 	go func() {
-		helloMsg := Msg{id, elevator.Elevator{}, false}
 		for {
-			helloTx <- helloMsg
-			time.Sleep(1 * time.Second)
+			msg := Transform_elevator(id, *e)
+			Tx <- msg
+			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 
@@ -72,11 +94,13 @@ func Set_up() {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
-		case a := <-helloRx:
-			if a.id == id {
+		case a := <-Rx:
+			if a.Sender == id {
 				continue
 			}
-			fmt.Printf("Received: %#v\n", a)
+			e, reciver_id := Transform_back(a)
+			esm.UpdateWorldView(&e, reciver_id)
+
 		}
 	}
 }
