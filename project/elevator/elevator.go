@@ -21,7 +21,7 @@ const (
 type Elevator struct {
 	Floor    int
 	Dirn     elevio.MotorDirection
-	Requests [numFloors][numButtons]bool
+	Requests [numFloors][numButtons]int
 	Behaviour ElevatorBehavior
 }
 
@@ -85,7 +85,7 @@ func ElevatorPrint(e Elevator){
 				(f == 0 && btn == int(elevio.BT_HallDown)) {
 				fmt.Print("|     ")
 			} else {
-				if e.Requests[f][btn] {
+				if e.Requests[f][btn] > 0 {
 					fmt.Print("|  #  ")
 				} else {
 					fmt.Print("|  -  ")
