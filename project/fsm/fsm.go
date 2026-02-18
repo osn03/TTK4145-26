@@ -30,7 +30,7 @@ func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.Button
 	switch e.Behaviour {
 	case elevator.EB_DoorOpen:
 		if request.ShouldClearImmediately(*e, floor, btnType) {
-			timer.Start(constant.DoorOpenDurationSec)
+			timer.Start(constant.DoorOpenDurationMS)
 		} else {
 			e.Requests[floor][btnType] = 1
 		}
@@ -47,7 +47,7 @@ func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.Button
 		switch pair.Behaviour {
 		case elevator.EB_DoorOpen:
 			elevio.SetDoorOpenLamp(true)
-			timer.Start(constant.DoorOpenDurationSec)
+			timer.Start(constant.DoorOpenDurationMS)
 			*e = request.ClearAtCurrentFloor(*e)
 		case elevator.EB_Moving:
 			elevio.SetMotorDirection(e.Dirn)
@@ -77,7 +77,7 @@ func OnFloorArrival(e *elevator.Elevator, newFloor int) {
 
 			*e = request.ClearAtCurrentFloor(*e)
 
-			timer.Start(constant.DoorOpenDurationSec)
+			timer.Start(constant.DoorOpenDurationMS)
 
 			SetAllLights(*e)
 
@@ -103,7 +103,7 @@ func OnDoorTimeout(e *elevator.Elevator) {
 
 		switch e.Behaviour {
 		case elevator.EB_DoorOpen:
-			timer.Start(constant.DoorOpenDurationSec)
+			timer.Start(constant.DoorOpenDurationMS)
 			*e = request.ClearAtCurrentFloor(*e)
 			SetAllLights(*e)
 		case elevator.EB_Moving, elevator.EB_Idle:

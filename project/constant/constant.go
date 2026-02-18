@@ -7,4 +7,6 @@ const (
 	DoorOpenDurationSec = 3
 
 	NetworkTimeout = 5000
+	DoorOpenDurationMS = 3000
+	TravelDurationMS = 2500
 )
