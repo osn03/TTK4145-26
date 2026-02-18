@@ -34,7 +34,7 @@ func Below(e elevator.Elevator) bool {
 }
 
 func Here(e elevator.Elevator) bool {
-	for b := elevio.ButtonType(0); b < 3; b++ {
+	for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
 		if e.Requests[e.Floor][b] {
 			return true
 		}
@@ -135,4 +135,66 @@ func ClearAtCurrentFloor(e elevator.Elevator) elevator.Elevator {
 	}
 
 	return e
+}
+
+
+
+func ClearAtCurrentFloorWithCallback(e elevator.Elevator, onClear func(btn elevio.ButtonType)) elevator.Elevator {
+
+    // Clear cab always
+    if e.Requests[e.Floor][elevio.BT_Cab] {
+        onClear(elevio.BT_Cab)
+        e.Requests[e.Floor][elevio.BT_Cab] = false
+    }
+
+    switch e.Dirn {
+    case elevio.MD_Up:
+        // if no requests above and hallUp not present, clear hallDown
+        if !Above(e) && !e.Requests[e.Floor][elevio.BT_HallUp] {
+            if e.Requests[e.Floor][elevio.BT_HallDown] {
+                onClear(elevio.BT_HallDown)
+                e.Requests[e.Floor][elevio.BT_HallDown] = false
+            }
+        }
+        if e.Requests[e.Floor][elevio.BT_HallUp] {
+            onClear(elevio.BT_HallUp)
+            e.Requests[e.Floor][elevio.BT_HallUp] = false
+        }
+
+    case elevio.MD_Down:
+        if !Below(e) && !e.Requests[e.Floor][elevio.BT_HallDown] {
+            if e.Requests[e.Floor][elevio.BT_HallUp] {
+                onClear(elevio.BT_HallUp)
+                e.Requests[e.Floor][elevio.BT_HallUp] = false
+            }
+        }
+        if e.Requests[e.Floor][elevio.BT_HallDown] {
+            onClear(elevio.BT_HallDown)
+            e.Requests[e.Floor][elevio.BT_HallDown] = false
+        }
+
+    case elevio.MD_Stop:
+        // clear both hall buttons if present
+        if e.Requests[e.Floor][elevio.BT_HallUp] {
+            onClear(elevio.BT_HallUp)
+            e.Requests[e.Floor][elevio.BT_HallUp] = false
+        }
+        if e.Requests[e.Floor][elevio.BT_HallDown] {
+            onClear(elevio.BT_HallDown)
+            e.Requests[e.Floor][elevio.BT_HallDown] = false
+        }
+
+    default:
+        // safe default: clear both hall buttons
+        if e.Requests[e.Floor][elevio.BT_HallUp] {
+            onClear(elevio.BT_HallUp)
+            e.Requests[e.Floor][elevio.BT_HallUp] = false
+        }
+        if e.Requests[e.Floor][elevio.BT_HallDown] {
+            onClear(elevio.BT_HallDown)
+            e.Requests[e.Floor][elevio.BT_HallDown] = false
+        }
+    }
+
+    return e
 }
