@@ -21,7 +21,7 @@ type WorldView struct {
 	OnlineElevators 	int
 }
 
-func UpdateOrders(internal *elevator.Elevator, worldview WorldView) {
+func UpdateOrders(internal *elevator.Elevator, worldview *WorldView) {
 	for buttonType := elevio.ButtonType(0); buttonType < constant.NumButtons; buttonType++ {
 		for floor := 0; floor < constant.NumFloors; floor++ {
 
@@ -49,19 +49,19 @@ func UpdateOrders(internal *elevator.Elevator, worldview WorldView) {
 	}
 }
 
-func UpdateWorldView(worldview *WorldView, message network.Msg) {
+func UpdateWorldView(worldview *WorldView, extelevator ExternalElevator, id int) {
 
-	if existing, ok := worldview.Elevators[message.Id]; ok {
+	if existing, ok := worldview.Elevators[id]; ok {
 		existing.timeout.Reset(constant.NetworkTimeout * time.Millisecond)
 
-		existing.elevator 	= message.Elevator
-		existing.status 	= message.Status
+		existing.elevator 	= extelevator.elevator
+		existing.status 	= extelevator.status
 
-		worldview.Elevators[message.Id] = existing
+		worldview.Elevators[id] = existing
 		return
 	}
 
-	AddElevator(worldview, message.Id, message.Elevator)
+	AddElevator(worldview, id, extelevator.elevator)
 
 	
 	
@@ -70,7 +70,7 @@ func UpdateWorldView(worldview *WorldView, message network.Msg) {
 
 func AddElevator(worldview *WorldView, id int, elevator elevator.Elevator) {
 	timeout:= time.AfterFunc(constant.NetworkTimeout * time.Millisecond, func () {
-		HandleTimeout(id, worldview)
+		detectTimout(make(chan int), id)
 	})
 
 	worldview.Elevators[id] = ExternalElevator{
@@ -84,11 +84,33 @@ func AddElevator(worldview *WorldView, id int, elevator elevator.Elevator) {
 	//denne funksjonen fungerer ikke, men mer eller mindre en plassholder for å legge til en ny elevator.
 }
 
-func NetworkTimeout(timeout chan<- int, worldview *WorldView) {
+func detectTimout(out chan<- int) {
+	out <- id
 
 }
 
 func HandleTimeout(id int, worldview *WorldView) {
 	worldview.Elevators[id] = ExternalElevator{status: false}
 	worldview.OnlineElevators -= 1
+}
+
+
+func RunESM(){
+	//Denne funksjonen skal kjøres i egen gorouting, håndterer worldview, timouts og oppdatering av ordre
+
+	timers := make(chan int)
+
+	var worldview WorldView
+
+	go UpdateOrders(elevator, &worldview) //elevator må fikses her
+	
+
+	select {
+		case id := <- timers:
+			HandleTimeout(id, &worldview)
+		
+		case extelevator := <- msg:
+
+	}
+
 }
