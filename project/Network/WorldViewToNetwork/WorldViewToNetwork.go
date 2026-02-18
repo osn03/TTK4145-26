@@ -1,4 +1,4 @@
-package Transform_elevator
+package WorldViewToNetwork
 
 import (
 	"flag"
@@ -99,7 +99,7 @@ func Set_up(e *esm.ExternalElevator, sender string) {
 				continue
 			}
 			e, reciver_id := Transform_back(a)
-			esm.UpdateWorldView(&e, reciver_id)
+			fmt.Printf("Received message from %d:\n%+v\n", reciver_id, e)
 
 		}
 	}
