@@ -66,6 +66,7 @@ func main() {
 				elevio.SetMotorDirection(elevio.MD_Stop)
 				e.Behaviour = elevator.EB_Idle
 				e.Dirn = elevio.MD_Stop
+				//sets states to match stopped elevator
 			} else {
 				pair := request.ChooseDirection(e)
 				e.Dirn = pair.Dirn

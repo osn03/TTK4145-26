@@ -12,7 +12,7 @@ import (
 func SetAllLights(e elevator.Elevator) {
 	for floor := 0; floor < constant.NumFloors; floor++ {
 		for button := 0; button < constant.NumButtons; button++ {
-			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button])
+			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == 1)
 		}
 	}
 }
@@ -32,14 +32,14 @@ func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.Button
 		if request.ShouldClearImmediately(*e, floor, btnType) {
 			timer.Start(constant.DoorOpenDurationSec)
 		} else {
-			e.Requests[floor][btnType] = true
+			e.Requests[floor][btnType] = 1
 		}
 
 	case elevator.EB_Moving:
-		e.Requests[floor][btnType] = true
+		e.Requests[floor][btnType] = 1
 
 	case elevator.EB_Idle:
-		e.Requests[floor][btnType] = true
+		e.Requests[floor][btnType] = 1
 		pair := request.ChooseDirection(*e)
 		e.Dirn = pair.Dirn
 		e.Behaviour = pair.Behaviour
@@ -94,7 +94,7 @@ func OnFloorArrival(e *elevator.Elevator, newFloor int) {
 func OnDoorTimeout(e *elevator.Elevator) {
 	fmt.Println("\n\nFSMOnDoorTimeout()")
 	elevator.ElevatorPrint(*e)
-	
+
 	switch e.Behaviour {
 	case elevator.EB_DoorOpen:
 		pair := request.ChooseDirection(*e)
