@@ -1,4 +1,4 @@
-package noder
+package node
 
 import (
 	"fmt"
