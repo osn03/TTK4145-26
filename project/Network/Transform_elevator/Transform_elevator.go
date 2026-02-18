@@ -1,12 +1,14 @@
 package Transform_elevator
 
 import (
-	"Project/Network/bcast"
-	"Project/Network/peers"
-	"Project/elevator"
-	"Project/elevio"
 	"flag"
 	"fmt"
+	"project/Network/bcast"
+	"project/Network/peers"
+	"project/constant"
+	"project/elevator"
+	"project/elevio"
+	"project/esm"
 	"time"
 )
 
@@ -16,31 +18,37 @@ import (
 //	will be received as zero-values.
 type ElevatorMsg struct {
 	Sender    int
+	Status    bool
 	Floor     int
 	Dirn      int
-	Requests  [constant.numFloors][constant.numButtons]bool
+	Requests  [constant.NumFloors][constant.NumButtons]int
 	Behaviour int
 }
-func Transform_elevator(e elevator.Elevator, sender int) ElevatorMsg {
+
+func Transform_elevator(sender_id int, e esm.ExternalElevator) ElevatorMsg {
 	return ElevatorMsg{
-		Sender:    sender,
-		Floor:     e.Floor,
-		Dirn:      int(e.Dirn),
-		Requests:  e.Requests,
-		Behaviour: int(e.Behaviour),
+		Sender:    sender_id,
+		Status:    e.Status,
+		Floor:     e.Elevator.Floor,
+		Dirn:      int(e.Elevator.Dirn),
+		Requests:  e.Elevator.Requests,
+		Behaviour: int(e.Elevator.Behaviour),
 	}
 }
-func Transform_back(msg ElevatorMsg) elevator.Elevator {
-	return elevator.Elevator{
-		Floor:     msg.Floor,
-		Dirn:      elevio.MotorDirection(msg.Dirn),
-		Requests:  msg.Requests,
-		Behaviour: elevator.ElevatorBehavior(msg.Behaviour),
-	}
+func Transform_back(msg ElevatorMsg) (e esm.ExternalElevator, sender_id int) {
+	return esm.ExternalElevator{
+			Status: msg.Status,
+			Elevator: elevator.Elevator{
+				Floor:     msg.Floor,
+				Dirn:      elevio.MotorDirection(msg.Dirn),
+				Requests:  msg.Requests,
+				Behaviour: elevator.ElevatorBehavior(msg.Behaviour),
+			},
+		},
+		msg.Sender
 }
 
-
-func Set_up(e *elevator.Elevator, sender string) {
+func Set_up(e *esm.ExternalElevator, sender string) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id int
@@ -70,12 +78,12 @@ func Set_up(e *elevator.Elevator, sender string) {
 
 	// The example message. We just send one of these every second.
 	go func() {
-    	for {
-        msg := Transform_elevator(*e, id)
-        Tx <- msg
-        time.Sleep(100 * time.Millisecond)
-    }
-}()
+		for {
+			msg := Transform_elevator(id, *e)
+			Tx <- msg
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
 
 	fmt.Println("Started")
 	for {
@@ -90,8 +98,8 @@ func Set_up(e *elevator.Elevator, sender string) {
 			if a.Sender == id {
 				continue
 			}
-			*e = Transform_back(a)
-
+			e, reciver_id := Transform_back(a)
+			esm.UpdateWorldView(&e, reciver_id)
 
 		}
 	}
