@@ -5,4 +5,6 @@ const (
 	NumButtons = 3
 	NumElevators = 3
 	DoorOpenDurationSec = 3
+
+	NetworkTimeout = 5000
 )
