@@ -26,7 +26,7 @@ type ElevatorMsg struct {
 }
 
 func Transform_elevator(sender_id int, e esm.ExternalElevator) ElevatorMsg {
-	return ElevatorMsg{
+	return ElevatorMsg{Obst
 		Sender:    sender_id,
 		Status:    e.Status,
 		Floor:     e.Elevator.Floor,
