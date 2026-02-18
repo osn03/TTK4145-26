@@ -52,6 +52,10 @@ func UpdateWorldView(worldview *WorldView, message network.Msg) {
 	//Id must be int, Status must be bool, Elevator must be elevator.Elevator
 }
 
+func AddNewElevator(worldview *WorldView, id int) {
+	worldview.Elevators[id] = ExternalElevator{status: false, elevator: elevator.Elevator{}}
+}
+
 func NetworkTimeout() {
 
 }
