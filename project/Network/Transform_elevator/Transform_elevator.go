@@ -1,12 +1,11 @@
-package main
+package Transform_elevator
 
 import (
-	"Network-go/network/bcast"
-	"Network-go/network/localip"
-	"Network-go/network/peers"
+	"Project/Network/bcast"
+	"Project/Network/peers"
+	"Project/elevator"
 	"flag"
 	"fmt"
-	"os"
 	"time"
 )
 
@@ -14,32 +13,29 @@ import (
 // Note that all members we want to transmit must be public. Any private members
 //
 //	will be received as zero-values.
-type HelloMsg struct {
-	Sender_id string
-	Message   string
-	Iter      int
+type Msg struct {
+	id int
+	Elevator elevator.Elevator
+	Status bool
 }
 
-func main() {
+func Transform_elevator(elevator.Elevator){
+	
+
+
+}
+
+
+func Set_up() {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
-	var id string
-	flag.StringVar(&id, "id", "", "id of this peer")
+	var id int
+	flag.IntVar(&id, "id", 0, "id of this peer")
 	flag.Parse()
 
 	// ... or alternatively, we can use the local IP address.
 	// (But since we can run multiple programs on the same PC, we also append the
 	//  process ID)
-
-	if id == "" {
-		localIP, err := localip.LocalIP()
-		if err != nil {
-			fmt.Println(err)
-			localIP = "DISCONNECTED"
-		}
-		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
-	}
-
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
 	peerUpdateCh := make(chan peers.PeerUpdate)
@@ -50,8 +46,8 @@ func main() {
 	go peers.Receiver(15647, peerUpdateCh)
 
 	// We make channels for sending and receiving our custom data types
-	helloTx := make(chan HelloMsg)
-	helloRx := make(chan HelloMsg)
+	helloTx := make(chan Msg)
+	helloRx := make(chan Msg)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
@@ -60,9 +56,8 @@ func main() {
 
 	// The example message. We just send one of these every second.
 	go func() {
-		helloMsg := HelloMsg{id, "Fra " + id, 0}
+		helloMsg := Msg{id, elevator.Elevator{}, false}
 		for {
-			helloMsg.Iter++
 			helloTx <- helloMsg
 			time.Sleep(1 * time.Second)
 		}
@@ -78,7 +73,7 @@ func main() {
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
 		case a := <-helloRx:
-			if a.Sender_id == id {
+			if a.id == id {
 				continue
 			}
 			fmt.Printf("Received: %#v\n", a)
