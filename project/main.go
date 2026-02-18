@@ -21,7 +21,7 @@ func main() {
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
-	time_timeout := make(chan bool) //?
+	time_timeout := make(chan bool)
 
 	var e elevator.Elevator
 	fsm.OnInitBetweenFloors(&e)
@@ -30,7 +30,7 @@ func main() {
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
-	go timer.TimedOut(time_timeout) //?
+	go timer.TimedOut(time_timeout)
 
 	for {
 		select {
@@ -41,11 +41,7 @@ func main() {
 
 		case a := <-drv_floors:
 			fmt.Printf("%+v\n", a)
-			/*if a == numFloors-1 {
-				d = elevio.MD_Down
-			} else if a == 0 {
-				d = elevio.MD_Stop
-			}*/
+
 			fsm.OnFloorArrival(&e, a)
 
 		case a := <-time_timeout:
@@ -56,20 +52,25 @@ func main() {
 		case a := <-drv_obstr:
 			fmt.Printf("%+v\n", a)
 			if a && e.Behaviour == elevator.EB_DoorOpen {
-				elevio.SetMotorDirection(elevio.MD_Stop)
-				timer.Start(10000000000)
-			} else {
-				//elevio.SetMotorDirection(request.ChooseDirection(e).Dirn)
 				timer.Stop()
+				//state and motordirection remain unchanged
+
+			} else {
 				timer.Start(constant.DoorOpenDurationSec)
+				//restarts timer that will trigger door close
 			}
 
 		case a := <-drv_stop:
 			fmt.Printf("%+v\n", a)
 			if a {
 				elevio.SetMotorDirection(elevio.MD_Stop)
+				e.Behaviour = elevator.EB_Idle
+				e.Dirn = elevio.MD_Stop
 			} else {
-				elevio.SetMotorDirection(request.ChooseDirection(e).Dirn)
+				pair := request.ChooseDirection(e)
+				e.Dirn = pair.Dirn
+				e.Behaviour = pair.Behaviour
+				elevio.SetMotorDirection(e.Dirn)
 			}
 
 		}

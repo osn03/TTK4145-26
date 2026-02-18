@@ -43,6 +43,9 @@ func Here(e elevator.Elevator) bool {
 }
 
 func ChooseDirection(e elevator.Elevator) DirnBehaviourPair {
+	if elevio.GetObstruction(){
+		return DirnBehaviourPair{elevio.MD_Stop, elevator.EB_DoorOpen}
+	}
 	switch e.Dirn {
 
 	case elevio.MD_Up:
