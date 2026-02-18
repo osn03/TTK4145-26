@@ -13,7 +13,7 @@ func GetWallTime() time.Time {
 
 func Start(duration float64) {
 	timerEndTime = GetWallTime().Add(
-		time.Duration(duration * float64(time.Second)),
+		time.Duration(duration * float64(time.Millisecond)),
 	)
 	timerActive = true
 }
