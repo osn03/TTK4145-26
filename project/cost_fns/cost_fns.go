@@ -62,8 +62,12 @@ func OptimalHallRequests(
 	for {
 
 		sort.Slice(states, func(i, j int) bool {
-			return states[i].Time < states[j].Time
+			if states[i].Time != states[j].Time {
+				return states[i].Time < states[j].Time
+			}
+			return states[i].ID < states[j].ID
 		})
+
 
 		done := true
 
@@ -276,53 +280,57 @@ func performSingleMove(s *State, reqs [][]Req) {
 // ==========================
 //
 
-func unvisitedAreImmediatelyAssignable(reqs [][]Req, states []State) bool {
-    // If any cab requests exist -> false
-    for _, s := range states {
-        for _, c := range s.State.Requests[s.State.Floor] {
-            if c {
-                return false
-            }
-        }
-    }
-
-    for f, floor := range reqs {
-        // more than 1 active hall button on a floor -> false
-        activeCount := 0
-        for _, r := range floor {
-            if r.Active {
-                activeCount++
-            }
-        }
-        if activeCount == 2 {
-            return false
-        }
-
-        for _, r := range floor {
-            if r.Active && r.AssignedTo == "" {
-                // find a state on same floor with no cab requests
-                found := false
-                for _, s := range states {
-                    if s.State.Floor == f {
-                        // check this elevator has no cab requests
-                        hasCab := false
-                        for _, c := range s.State.Requests[f] {
-                            if c { hasCab = true; break }
-                        }
-                        if !hasCab {
-                            found = true
-                            break
-                        }
-                    }
-                }
-                if !found {
-                    return false
-                }
-            }
-        }
-    }
-    return true
+func elevatorHasAnyCab(e elevator.Elevator) bool {
+	for f := 0; f < constant.NumFloors; f++ {
+		if e.Requests[f][elevio.BT_Cab] {
+			return true
+		}
+	}
+	return false
 }
+
+func unvisitedAreImmediatelyAssignable(reqs [][]Req, states []State) bool {
+	// 1) Hvis noen heis har noen cab-request -> false
+	for _, s := range states {
+		if elevatorHasAnyCab(s.State) {
+			return false
+		}
+	}
+
+	// 2) Ingen etasje kan ha både hallUp og hallDown aktive samtidig
+	for _, floorReqs := range reqs {
+		activeCount := 0
+		for _, r := range floorReqs {
+			if r.Active {
+				activeCount++
+			}
+		}
+		if activeCount == 2 {
+			return false
+		}
+	}
+
+	// 3) Alle unassigned hall-requests må være på en etasje hvor det står en heis (som også har 0 cab)
+	for f, floorReqs := range reqs {
+		for _, r := range floorReqs {
+			if r.Active && r.AssignedTo == "" {
+				found := false
+				for _, s := range states {
+					if s.State.Floor == f && !elevatorHasAnyCab(s.State) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return false
+				}
+			}
+		}
+	}
+
+	return true
+}
+
 
 
 func assignImmediate(reqs [][]Req, states []State) {
@@ -360,33 +368,24 @@ func assignImmediate(reqs [][]Req, states []State) {
 
 
 func withUnassignedRequests(s State, reqs [][]Req) elevator.Elevator {
-    var e elevator.Elevator
+	var e elevator.Elevator
+	e.Floor = s.State.Floor
+	e.Dirn = s.State.Dirn
+	e.Behaviour = s.State.Behaviour
 
-    e.Floor = s.State.Floor
-    e.Dirn = s.State.Dirn
-    e.Behaviour = s.State.Behaviour
+	// Cab
+	for f := 0; f < constant.NumFloors; f++ {
+		e.Requests[f][elevio.BT_Cab] = s.State.Requests[f][elevio.BT_Cab]
+	}
 
-    // Copy cab requests
-    for f := 0; f < constant.NumFloors; f++ {
-        if f < len(s.State.Requests) && s.State.Requests[f][elevio.BT_Cab] {
-            e.Requests[f][elevio.BT_Cab] = true
-        } else {
-            e.Requests[f][elevio.BT_Cab] = false
-        }
-    }
-
-    // Include hall requests that are unassigned OR assigned to this elevator
-    for f := 0; f < constant.NumFloors; f++ {
-        for btn := elevio.ButtonType(0); btn < elevio.ButtonType(constant.NumButtons-1); btn++ {
-            r := reqs[f][int(btn)]
-            if !r.Active {
-                continue
-            }
-            if r.AssignedTo == "" || r.AssignedTo == s.ID {
-                e.Requests[f][btn] = true
-            }
-        }
-    }
-
-    return e
+	// Hall (kun 0..1)
+	for f := 0; f < constant.NumFloors; f++ {
+		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+			r := reqs[f][int(btn)]
+			if r.Active && (r.AssignedTo == "" || r.AssignedTo == s.ID) {
+				e.Requests[f][btn] = true
+			}
+		}
+	}
+	return e
 }
