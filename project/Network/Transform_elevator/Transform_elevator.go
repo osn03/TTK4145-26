@@ -170,3 +170,29 @@ func Set_up2() {
 		}
 	}
 }
+
+/* For å teste kom kan denne main-funk brukes: 
+
+func main() {
+	var elev1 esm.ExternalElevator
+	elev1.Status = true
+	var elev2 elevator.Elevator
+	
+
+	elev2.Floor = 0
+	elev2.Dirn = 1
+	elev2.Behaviour = elevator.EB_Idle
+	elev2.Requests = [4][3]int{
+		{0, 0, 0},
+		{0, 0, 0},
+		{0, 0, 0},
+		{0, 0, 0},
+	}
+	elev1.Elevator = elev2
+
+	Transform_elevator.Set_up1(&elev1)
+
+}
+*/
+
+
