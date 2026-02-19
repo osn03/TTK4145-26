@@ -102,7 +102,7 @@ func OptimalHallRequests(
 			result[id][f] = make([]bool, buttons)
 
 			if includeCab {
-				result[id][f][2] = elevatorStates[id].Requests[f][elevio.BT_Cab]
+				result[id][f][2] = elevator.ReqIsActive(elevatorStates[id].Requests[f][elevio.BT_Cab])
 			}
 		}
 	}
@@ -163,7 +163,7 @@ func initialStates(states map[string]elevator.Elevator) []State {
 }
 
 func copyState(s elevator.Elevator) elevator.Elevator {
-	cab := make([]bool, len(s.Requests))
+	cab := make([]int, len(s.Requests))
 	for f := 0; f < len(s.Requests); f++ {
 		cab[f] = s.Requests[f][elevio.BT_Cab]
 	}
@@ -236,7 +236,7 @@ func performSingleMove(s *State, reqs [][]Req) {
 		case elevio.BT_HallUp, elevio.BT_HallDown:
 			reqs[s.State.Floor][btn].AssignedTo = s.ID
 		case elevio.BT_Cab:
-			s.State.Requests[s.State.Floor][elevio.BT_Cab] = false
+			s.State.Requests[s.State.Floor][elevio.BT_Cab] = 0
 		}
 	}
 	e = request.ClearAtCurrentFloorWithCallback(e, onClearRequest)

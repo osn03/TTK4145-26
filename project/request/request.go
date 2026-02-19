@@ -15,7 +15,7 @@ func Above(e elevator.Elevator) bool {
 	for f := e.Floor + 1; f < constant.NumFloors; f++ {
 
 		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
-			if e.Requests[f][b] ==1 {
+			if elevator.ReqIsActive(e.Requests[f][b]) {
 				return true
 			}
 		}
@@ -27,7 +27,7 @@ func Below(e elevator.Elevator) bool {
 	for f := 0; f < e.Floor; f++ {
 
 		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
-			if e.Requests[f][b] == 1 {
+			if elevator.ReqIsActive(e.Requests[f][b]) {
 
 				return true
 			}
@@ -37,8 +37,8 @@ func Below(e elevator.Elevator) bool {
 }
 
 func Here(e elevator.Elevator) bool {
-	for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
-		if e.Requests[e.Floor][b] {
+	for b := elevio.ButtonType(0); b < 3; b++ {
+		if elevator.ReqIsActive(e.Requests[e.Floor][b]) {
 			return true
 		}
 	}
@@ -90,13 +90,13 @@ func ShouldStop(e elevator.Elevator) bool {
 	switch e.Dirn {
 
 	case elevio.MD_Up:
-		return e.Requests[e.Floor][elevio.BT_HallUp] == 1 ||
-			e.Requests[e.Floor][elevio.BT_Cab] == 1 ||
+		return elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallUp]) ||
+			elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_Cab]) ||
 			!Above(e)
 
 	case elevio.MD_Down:
-		return e.Requests[e.Floor][elevio.BT_HallDown] == 1 ||
-			e.Requests[e.Floor][elevio.BT_Cab] == 1 ||
+		return elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallDown]) ||
+			elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_Cab]) ||
 			!Below(e)
 
 	case elevio.MD_Stop:
@@ -106,6 +106,7 @@ func ShouldStop(e elevator.Elevator) bool {
 		return true
 	}
 }
+
 
 func ShouldClearImmediately(e elevator.Elevator, btnFloor int, btnType elevio.ButtonType) bool {
 	return e.Floor == btnFloor &&
@@ -123,21 +124,21 @@ func ClearAtCurrentFloor(e elevator.Elevator) elevator.Elevator {
 
 	case elevio.MD_Up:
 		if !Above(e) && !(e.Requests[e.Floor][elevio.BT_HallUp] == 1) {
-			e.Requests[e.Floor][elevio.BT_HallDown] = 0
+			e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqNone
 		}
-		e.Requests[e.Floor][elevio.BT_HallUp] = 0	
+		e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqNone	
 
 	case elevio.MD_Down:
 		if !Below(e) && !(e.Requests[e.Floor][elevio.BT_HallDown] == 1) {
-			e.Requests[e.Floor][elevio.BT_HallUp] = 0
+			e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqNone
 		}
-		e.Requests[e.Floor][elevio.BT_HallDown] = 0
+		e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqNone
 
 	case elevio.MD_Stop:
 		fallthrough
 	default:
-		e.Requests[e.Floor][elevio.BT_HallUp] = 0
-		e.Requests[e.Floor][elevio.BT_HallDown] = 0
+		e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqNone
+		e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqNone
 	}
 
 	return e
