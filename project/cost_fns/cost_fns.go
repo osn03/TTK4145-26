@@ -62,8 +62,12 @@ func OptimalHallRequests(
 	for {
 
 		sort.Slice(states, func(i, j int) bool {
-			return states[i].Time < states[j].Time
+			if states[i].Time != states[j].Time {
+				return states[i].Time < states[j].Time
+			}
+			return states[i].ID < states[j].ID
 		})
+
 
 		done := true
 
@@ -98,7 +102,7 @@ func OptimalHallRequests(
 			result[id][f] = make([]bool, buttons)
 
 			if includeCab {
-				result[id][f][2] = elevatorStates[id].Requests[f][elevio.BT_Cab]
+				result[id][f][2] = elevator.ReqIsActive(elevatorStates[id].Requests[f][elevio.BT_Cab])
 			}
 		}
 	}
@@ -159,7 +163,7 @@ func initialStates(states map[string]elevator.Elevator) []State {
 }
 
 func copyState(s elevator.Elevator) elevator.Elevator {
-	cab := make([]bool, len(s.Requests))
+	cab := make([]int, len(s.Requests))
 	for f := 0; f < len(s.Requests); f++ {
 		cab[f] = s.Requests[f][elevio.BT_Cab]
 	}
@@ -232,7 +236,7 @@ func performSingleMove(s *State, reqs [][]Req) {
 		case elevio.BT_HallUp, elevio.BT_HallDown:
 			reqs[s.State.Floor][c].AssignedTo = s.ID
 		case elevio.BT_Cab:
-			s.State.Requests[s.State.Floor][elevio.BT_Cab] = false
+			s.State.Requests[s.State.Floor][elevio.BT_Cab] = 0
 		}
 	}
 
@@ -357,24 +361,22 @@ func withUnassignedRequests(
 
     //  Cab calls
     for f := 0; f < constant.NumFloors; f++ {
-        if s.State.Requests[f][elevio.BT_Cab] {
-            e.Requests[f][elevio.BT_Cab] = true
-        }
+        if s.State.Requests[f][elevio.BT_Cab] == 1 || s.State.Requests[f][elevio.BT_Cab] == 2{
+            e.Requests[f][elevio.BT_Cab] = 2
+        } else {
+			e.Requests[f][elevio.BT_Cab] = 0
+		}
     }
 
     //  Hall calls
     for f := 0; f < constant.NumFloors; f++ {
-        for btn := elevio.ButtonType(0); btn < constant.NumButtons-1; btn++ {
+        for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
 
-            r := reqs[f][btn]
+            r := reqs[f][int(btn)]
 
-            if !r.Active {
-                continue
-            }
-
-            if r.AssignedTo == "" || r.AssignedTo == s.ID {
-                e.Requests[f][btn] = true
-            }
+            if r.Active && (r.AssignedTo == "" || r.AssignedTo == s.ID) {
+				e.Requests[f][btn] = 2
+			}
         }
     }
 
