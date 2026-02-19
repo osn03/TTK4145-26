@@ -373,28 +373,19 @@ func withUnassignedRequests(s State, reqs [][]Req) elevator.Elevator {
 	e.Dirn = s.State.Dirn
 	e.Behaviour = s.State.Behaviour
 
-    //  Cab calls
-    for f := 0; f < constant.NumFloors; f++ {
-        if s.State.Requests[f][elevio.BT_Cab] {
-            e.Requests[f][elevio.BT_Cab] = true
-        }
-    }
+	// Cab
+	for f := 0; f < constant.NumFloors; f++ {
+		e.Requests[f][elevio.BT_Cab] = s.State.Requests[f][elevio.BT_Cab]
+	}
 
-    //  Hall calls
-    for f := 0; f < constant.NumFloors; f++ {
-        for btn := elevio.ButtonType(0); btn < constant.NumButtons-1; btn++ {
-
-            r := reqs[f][btn]
-
-            if !r.Active {
-                continue
-            }
-
-            if r.AssignedTo == "" || r.AssignedTo == s.ID {
-                e.Requests[f][btn] = true
-            }
-        }
-    }
-
-    return e
+	// Hall (kun 0..1)
+	for f := 0; f < constant.NumFloors; f++ {
+		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+			r := reqs[f][int(btn)]
+			if r.Active && (r.AssignedTo == "" || r.AssignedTo == s.ID) {
+				e.Requests[f][btn] = true
+			}
+		}
+	}
+	return e
 }
