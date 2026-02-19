@@ -43,13 +43,22 @@ func OptimalHallRequests(
 		panic("No elevator states provided")
 	}
 
-	for _, s := range elevatorStates {
+	for id, s := range elevatorStates {
 		if len(s.Requests) != numFloors {
 			panic("Hall and cab requests do not have same length")
 		}
 		if s.Floor < 0 || s.Floor >= numFloors {
 			panic("Elevator at invalid floor")
 		}
+		
+		if s.Behaviour == elevator.EB_Moving {
+			next := s.Floor + int(s.Dirn)
+			if next < 0 || next >= numFloors {
+				panic("Elevator " + id + " is moving out of bounds")
+			}
+		}
+
+
 	}
 
 	reqs := toReq(hallReqs)
@@ -196,6 +205,7 @@ func anyUnassigned(reqs [][]Req) bool {
 //
 
 func performInitialMove(s *State, reqs [][]Req) {
+	numFloors := len(reqs)
 
 	switch s.State.Behaviour {
 
@@ -205,17 +215,25 @@ func performInitialMove(s *State, reqs [][]Req) {
 
 	case elevator.EB_Idle:
 		for btn := 0; btn < 2; btn++ {
-			if reqs[s.State.Floor][btn].Active  && reqs[s.State.Floor][btn].AssignedTo == "" {
+			if reqs[s.State.Floor][btn].Active && reqs[s.State.Floor][btn].AssignedTo == "" {
 				reqs[s.State.Floor][btn].AssignedTo = s.ID
 				s.Time += constant.DoorOpenDurationMS
 			}
 		}
 
 	case elevator.EB_Moving:
-		s.State.Floor += int(s.State.Dirn)
+		next := s.State.Floor + int(s.State.Dirn)
+		if next < 0 || next >= numFloors {
+			// Robust fallback (shouldn't happen if input validation is correct)
+			s.State.Dirn = elevio.MD_Stop
+			s.State.Behaviour = elevator.EB_Idle
+			return
+		}
+		s.State.Floor = next
 		s.Time += constant.TravelDurationMS / 2
 	}
 }
+
 
 //
 // ==========================
@@ -224,6 +242,8 @@ func performInitialMove(s *State, reqs [][]Req) {
 //
 
 func performSingleMove(s *State, reqs [][]Req) {
+	numFloors := len(reqs)
+
 	e := withUnassignedRequests(*s, reqs)
 
 	onClearRequest := func(btn elevio.ButtonType) {
@@ -231,7 +251,6 @@ func performSingleMove(s *State, reqs [][]Req) {
 		case elevio.BT_HallUp, elevio.BT_HallDown:
 			reqs[s.State.Floor][int(btn)].AssignedTo = s.ID
 		case elevio.BT_Cab:
-			// mark deleting (eller la e styre dette)
 			s.State.Requests[s.State.Floor][elevio.BT_Cab] = elevator.ReqDeleting
 		}
 	}
@@ -240,12 +259,17 @@ func performSingleMove(s *State, reqs [][]Req) {
 
 	case elevator.EB_Moving:
 		if request.ShouldStop(e) {
-			// stop and clear
 			e = request.ClearAtCurrentFloorWithCallback(e, onClearRequest)
 			s.State.Behaviour = elevator.EB_DoorOpen
 			s.Time += constant.DoorOpenDurationMS
 		} else {
-			s.State.Floor += int(s.State.Dirn)
+			next := s.State.Floor + int(s.State.Dirn)
+			if next < 0 || next >= numFloors {
+				s.State.Dirn = elevio.MD_Stop
+				s.State.Behaviour = elevator.EB_Idle
+				return
+			}
+			s.State.Floor = next
 			s.Time += constant.TravelDurationMS
 		}
 
@@ -262,12 +286,21 @@ func performSingleMove(s *State, reqs [][]Req) {
 				s.State.Behaviour = elevator.EB_Idle
 			}
 		} else {
+			
+			next := s.State.Floor + int(s.State.Dirn)
+			if next < 0 || next >= numFloors {
+				s.State.Dirn = elevio.MD_Stop
+				s.State.Behaviour = elevator.EB_Idle
+				return
+			}
+
 			s.State.Behaviour = elevator.EB_Moving
-			s.State.Floor += int(s.State.Dirn)
+			s.State.Floor = next
 			s.Time += constant.TravelDurationMS
 		}
 	}
 }
+
 
 //
 // ==========================
@@ -374,7 +407,7 @@ func withUnassignedRequests(s State, reqs [][]Req) elevator.Elevator {
 		e.Requests[f][elevio.BT_Cab] = s.State.Requests[f][elevio.BT_Cab]
 	}
 
-	// Hall (kun 0..1)
+	// Hall 
 	for f := 0; f < constant.NumFloors; f++ {
 		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
 			r := reqs[f][int(btn)]

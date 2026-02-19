@@ -12,7 +12,7 @@ import (
 func SetAllLights(e elevator.Elevator) {
 	for floor := 0; floor < constant.NumFloors; floor++ {
 		for button := 0; button < constant.NumButtons; button++ {
-			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == 1)
+			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == elevator.ReqConfirmed)
 		}
 	}
 }
@@ -96,20 +96,50 @@ func OnDoorTimeout(e *elevator.Elevator) {
 	elevator.ElevatorPrint(*e)
 
 	switch e.Behaviour {
+
 	case elevator.EB_DoorOpen:
+
+		// NEW: obstruction policy belongs in FSM (not request logic)
+		if elevio.GetObstruction() {
+			// Keep door open, motor stopped, restart timer
+			e.Dirn = elevio.MD_Stop
+			e.Behaviour = elevator.EB_DoorOpen
+
+			elevio.SetMotorDirection(elevio.MD_Stop)
+			elevio.SetDoorOpenLamp(true)
+			timer.Start(constant.DoorOpenDurationMS)
+
+			// Optional: lights unchanged, but you can refresh if you want:
+			SetAllLights(*e)
+
+			fmt.Println("\nNew state (obstructed):")
+			elevator.ElevatorPrint(*e)
+			return
+		}
+
+		// Normal flow
 		pair := request.ChooseDirection(*e)
 		e.Dirn = pair.Dirn
 		e.Behaviour = pair.Behaviour
 
 		switch e.Behaviour {
+
 		case elevator.EB_DoorOpen:
 			timer.Start(constant.DoorOpenDurationMS)
 			*e = request.ClearAtCurrentFloor(*e)
 			SetAllLights(*e)
-		case elevator.EB_Moving, elevator.EB_Idle:
+
+		case elevator.EB_Moving:
 			elevio.SetDoorOpenLamp(false)
 			elevio.SetMotorDirection(e.Dirn)
+
+		case elevator.EB_Idle:
+			elevio.SetDoorOpenLamp(false)
+			elevio.SetMotorDirection(elevio.MD_Stop)
+			// Optional: SetAllLights(*e)
+
 		}
+
 	default:
 		// Do nothing for other behaviours
 	}
