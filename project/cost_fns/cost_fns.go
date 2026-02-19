@@ -163,18 +163,14 @@ func initialStates(states map[string]elevator.Elevator) []State {
 }
 
 func copyState(s elevator.Elevator) elevator.Elevator {
-	cab := make([]int, len(s.Requests))
-	for f := 0; f < len(s.Requests); f++ {
-		cab[f] = s.Requests[f][elevio.BT_Cab]
-	}
-
 	return elevator.Elevator{
 		Behaviour: s.Behaviour,
 		Floor:     s.Floor,
 		Dirn:      s.Dirn,
-		Requests:  s.Requests,
+		Requests:  s.Requests, 
 	}
 }
+
 
 //
 // ==========================
@@ -228,44 +224,43 @@ func performInitialMove(s *State, reqs [][]Req) {
 //
 
 func performSingleMove(s *State, reqs [][]Req) {
-
 	e := withUnassignedRequests(*s, reqs)
 
 	onClearRequest := func(btn elevio.ButtonType) {
 		switch btn {
 		case elevio.BT_HallUp, elevio.BT_HallDown:
-			reqs[s.State.Floor][btn].AssignedTo = s.ID
+			reqs[s.State.Floor][int(btn)].AssignedTo = s.ID
 		case elevio.BT_Cab:
-			s.State.Requests[s.State.Floor][elevio.BT_Cab] = 0
+			// mark deleting (eller la e styre dette)
+			s.State.Requests[s.State.Floor][elevio.BT_Cab] = elevator.ReqDeleting
 		}
 	}
-	e = request.ClearAtCurrentFloorWithCallback(e, onClearRequest)
 
 	switch s.State.Behaviour {
 
 	case elevator.EB_Moving:
 		if request.ShouldStop(e) {
+			// stop and clear
+			e = request.ClearAtCurrentFloorWithCallback(e, onClearRequest)
 			s.State.Behaviour = elevator.EB_DoorOpen
 			s.Time += constant.DoorOpenDurationMS
-			request.ClearAtCurrentFloorWithCallback(e, onClearRequest)
 		} else {
 			s.State.Floor += int(s.State.Dirn)
 			s.Time += constant.TravelDurationMS
 		}
 
 	case elevator.EB_Idle, elevator.EB_DoorOpen:
-		s.State.Dirn = request.ChooseDirection(e).Dirn
+		pair := request.ChooseDirection(e)
+		s.State.Dirn = pair.Dirn
 
-		if s.State.Dirn == elevio.MD_Stop {
-
+		if pair.Dirn == elevio.MD_Stop {
 			if request.Here(e) {
-				request.ClearAtCurrentFloorWithCallback(e, onClearRequest)
+				e = request.ClearAtCurrentFloorWithCallback(e, onClearRequest)
 				s.Time += constant.DoorOpenDurationMS
 				s.State.Behaviour = elevator.EB_DoorOpen
 			} else {
 				s.State.Behaviour = elevator.EB_Idle
 			}
-
 		} else {
 			s.State.Behaviour = elevator.EB_Moving
 			s.State.Floor += int(s.State.Dirn)
@@ -282,7 +277,7 @@ func performSingleMove(s *State, reqs [][]Req) {
 
 func elevatorHasAnyCab(e elevator.Elevator) bool {
 	for f := 0; f < constant.NumFloors; f++ {
-		if e.Requests[f][elevio.BT_Cab] {
+		if elevator.ReqIsActive(e.Requests[f][elevio.BT_Cab]) {
 			return true
 		}
 	}
@@ -334,28 +329,29 @@ func unvisitedAreImmediatelyAssignable(reqs [][]Req, states []State) bool {
 
 
 func assignImmediate(reqs [][]Req, states []State) {
-    for f := range reqs {
-        for c := range reqs[f] {
-            if reqs[f][c].Active && reqs[f][c].AssignedTo == "" {
-                // assign to first elevator on floor with NO cab requests
-                for i := range states {
-                    if states[i].State.Floor == f {
-                        // check for no cab requests
-                        hasCab := false
-                        for _, cab := range states[i].State.Requests[f] {
-                            if cab { hasCab = true; break }
-                        }
-                        if !hasCab {
-                            reqs[f][c].AssignedTo = states[i].ID
-                            states[i].Time += constant.DoorOpenDurationMS
-                            break
-                        }
-                    }
-                }
-            }
-        }
-    }
+	for f := range reqs {
+		for c := range reqs[f] {
+			if !reqs[f][c].Active || reqs[f][c].AssignedTo != "" {
+				continue
+			}
+
+			// Assign to first elevator currently at floor f with NO cab requests anywhere
+			for i := range states {
+				if states[i].State.Floor != f {
+					continue
+				}
+				if elevatorHasAnyCab(states[i].State) {
+					continue
+				}
+
+				reqs[f][c].AssignedTo = states[i].ID
+				states[i].Time += constant.DoorOpenDurationMS
+				break
+			}
+		}
+	}
 }
+
 
 
 //
@@ -383,7 +379,7 @@ func withUnassignedRequests(s State, reqs [][]Req) elevator.Elevator {
 		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
 			r := reqs[f][int(btn)]
 			if r.Active && (r.AssignedTo == "" || r.AssignedTo == s.ID) {
-				e.Requests[f][btn] = true
+				e.Requests[f][btn] = elevator.ReqConfirmed
 			}
 		}
 	}
