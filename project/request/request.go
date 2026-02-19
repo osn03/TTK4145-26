@@ -15,7 +15,7 @@ func Above(e elevator.Elevator) bool {
 	for f := e.Floor + 1; f < constant.NumFloors; f++ {
 
 		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
-			if e.Requests[f][b] ==1 {
+			if elevator.ReqIsActive(e.Requests[f][b]) {
 				return true
 			}
 		}
@@ -27,7 +27,7 @@ func Below(e elevator.Elevator) bool {
 	for f := 0; f < e.Floor; f++ {
 
 		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
-			if e.Requests[f][b] == 1 {
+			if elevator.ReqIsActive(e.Requests[f][b]) {
 
 				return true
 			}
@@ -37,8 +37,8 @@ func Below(e elevator.Elevator) bool {
 }
 
 func Here(e elevator.Elevator) bool {
-	for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
-		if e.Requests[e.Floor][b] {
+	for b := elevio.ButtonType(0); b < 3; b++ {
+		if elevator.ReqIsActive(e.Requests[e.Floor][b]) {
 			return true
 		}
 	}
@@ -46,9 +46,6 @@ func Here(e elevator.Elevator) bool {
 }
 
 func ChooseDirection(e elevator.Elevator) DirnBehaviourPair {
-	if elevio.GetObstruction(){
-		return DirnBehaviourPair{elevio.MD_Stop, elevator.EB_DoorOpen}
-	}
 	switch e.Dirn {
 
 	case elevio.MD_Up:
@@ -86,17 +83,18 @@ func ChooseDirection(e elevator.Elevator) DirnBehaviourPair {
 	}
 }
 
+
 func ShouldStop(e elevator.Elevator) bool {
 	switch e.Dirn {
 
 	case elevio.MD_Up:
-		return e.Requests[e.Floor][elevio.BT_HallUp] == 1 ||
-			e.Requests[e.Floor][elevio.BT_Cab] == 1 ||
+		return elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallUp]) ||
+			elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_Cab]) ||
 			!Above(e)
 
 	case elevio.MD_Down:
-		return e.Requests[e.Floor][elevio.BT_HallDown] == 1 ||
-			e.Requests[e.Floor][elevio.BT_Cab] == 1 ||
+		return elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallDown]) ||
+			elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_Cab]) ||
 			!Below(e)
 
 	case elevio.MD_Stop:
@@ -106,6 +104,7 @@ func ShouldStop(e elevator.Elevator) bool {
 		return true
 	}
 }
+
 
 func ShouldClearImmediately(e elevator.Elevator, btnFloor int, btnType elevio.ButtonType) bool {
 	return e.Floor == btnFloor &&
@@ -122,22 +121,22 @@ func ClearAtCurrentFloor(e elevator.Elevator) elevator.Elevator {
 	switch e.Dirn {
 
 	case elevio.MD_Up:
-		if !Above(e) && !(e.Requests[e.Floor][elevio.BT_HallUp] == 1) {
-			e.Requests[e.Floor][elevio.BT_HallDown] = 0
+		if !Above(e) && !elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallUp]) {
+			e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqNone
 		}
-		e.Requests[e.Floor][elevio.BT_HallUp] = 0	
+		e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqNone	
 
 	case elevio.MD_Down:
-		if !Below(e) && !(e.Requests[e.Floor][elevio.BT_HallDown] == 1) {
-			e.Requests[e.Floor][elevio.BT_HallUp] = 0
+		if !Below(e) && !elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallDown]) {
+			e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqNone
 		}
-		e.Requests[e.Floor][elevio.BT_HallDown] = 0
+		e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqNone
 
 	case elevio.MD_Stop:
 		fallthrough
 	default:
-		e.Requests[e.Floor][elevio.BT_HallUp] = 0
-		e.Requests[e.Floor][elevio.BT_HallDown] = 0
+		e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqNone
+		e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqNone
 	}
 
 	return e
@@ -147,60 +146,42 @@ func ClearAtCurrentFloor(e elevator.Elevator) elevator.Elevator {
 
 func ClearAtCurrentFloorWithCallback(e elevator.Elevator, onClear func(btn elevio.ButtonType)) elevator.Elevator {
 
-    // Clear cab always
-    if e.Requests[e.Floor][elevio.BT_Cab] {
-        onClear(elevio.BT_Cab)
-        e.Requests[e.Floor][elevio.BT_Cab] = false
-    }
+	// Helper: transition active -> deleting (and call onClear once)
+	markDeleting := func(btn elevio.ButtonType) {
+		if elevator.ReqIsActive(e.Requests[e.Floor][btn]) {
+			onClear(btn)
+			e.Requests[e.Floor][btn] = elevator.ReqDeleting
+		}
+	}
 
-    switch e.Dirn {
-    case elevio.MD_Up:
-        // if no requests above and hallUp not present, clear hallDown
-        if !Above(e) && !e.Requests[e.Floor][elevio.BT_HallUp] {
-            if e.Requests[e.Floor][elevio.BT_HallDown] {
-                onClear(elevio.BT_HallDown)
-                e.Requests[e.Floor][elevio.BT_HallDown] = false
-            }
-        }
-        if e.Requests[e.Floor][elevio.BT_HallUp] {
-            onClear(elevio.BT_HallUp)
-            e.Requests[e.Floor][elevio.BT_HallUp] = false
-        }
+	// Cab: clear (mark deleting) if active
+	markDeleting(elevio.BT_Cab)
 
-    case elevio.MD_Down:
-        if !Below(e) && !e.Requests[e.Floor][elevio.BT_HallDown] {
-            if e.Requests[e.Floor][elevio.BT_HallUp] {
-                onClear(elevio.BT_HallUp)
-                e.Requests[e.Floor][elevio.BT_HallUp] = false
-            }
-        }
-        if e.Requests[e.Floor][elevio.BT_HallDown] {
-            onClear(elevio.BT_HallDown)
-            e.Requests[e.Floor][elevio.BT_HallDown] = false
-        }
+	switch e.Dirn {
 
-    case elevio.MD_Stop:
-        // clear both hall buttons if present
-        if e.Requests[e.Floor][elevio.BT_HallUp] {
-            onClear(elevio.BT_HallUp)
-            e.Requests[e.Floor][elevio.BT_HallUp] = false
-        }
-        if e.Requests[e.Floor][elevio.BT_HallDown] {
-            onClear(elevio.BT_HallDown)
-            e.Requests[e.Floor][elevio.BT_HallDown] = false
-        }
+	case elevio.MD_Up:
+		// If no requests above AND hallUp not active at this floor, clear hallDown too
+		if !Above(e) && !elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallUp]) {
+			markDeleting(elevio.BT_HallDown)
+		}
+		// Always clear hallUp in up-direction if active
+		markDeleting(elevio.BT_HallUp)
 
-    default:
-        // safe default: clear both hall buttons
-        if e.Requests[e.Floor][elevio.BT_HallUp] {
-            onClear(elevio.BT_HallUp)
-            e.Requests[e.Floor][elevio.BT_HallUp] = false
-        }
-        if e.Requests[e.Floor][elevio.BT_HallDown] {
-            onClear(elevio.BT_HallDown)
-            e.Requests[e.Floor][elevio.BT_HallDown] = false
-        }
-    }
+	case elevio.MD_Down:
+		// If no requests below AND hallDown not active at this floor, clear hallUp too
+		if !Below(e) && !elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallDown]) {
+			markDeleting(elevio.BT_HallUp)
+		}
+		// Always clear hallDown in down-direction if active
+		markDeleting(elevio.BT_HallDown)
 
-    return e
+	case elevio.MD_Stop:
+		fallthrough
+	default:
+		// Clear both hall buttons if active
+		markDeleting(elevio.BT_HallUp)
+		markDeleting(elevio.BT_HallDown)
+	}
+
+	return e
 }

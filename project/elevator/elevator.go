@@ -11,6 +11,22 @@ const numButtons int = constant.NumButtons
 
 
 type ElevatorBehavior int
+type ReqState int
+
+const (
+	ReqNone        ReqState = 0
+	ReqUnconfirmed ReqState = 1
+	ReqConfirmed   ReqState = 2
+	ReqDeleting    ReqState = 3
+)
+
+func ReqIsActive(s ReqState) bool {
+	return s == ReqUnconfirmed || s == ReqConfirmed
+}
+
+func ReqLampOn(s ReqState) bool {
+	return s == ReqConfirmed
+}
 
 const (
 	EB_Idle ElevatorBehavior = iota
@@ -21,7 +37,7 @@ const (
 type Elevator struct {
 	Floor    int
 	Dirn     elevio.MotorDirection
-	Requests [numFloors][numButtons]int
+	Requests [numFloors][numButtons]ReqState
 	Behaviour ElevatorBehavior
 }
 

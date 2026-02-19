@@ -21,7 +21,7 @@ func hallReqs4(f0up, f0dn, f1up, f1dn, f2up, f2dn, f3up, f3dn bool) [][]bool {
 }
 
 // E builds an elevator state (snapshot) with cab requests set on given floors.
-// NOTE: we store cab calls in e.Requests[f][BT_Cab] because that's how your elevator struct is modeled.
+// Requests are now FSM states (0..3). We mark cab orders as "Confirmed" in tests.
 func E(floor int, dir elevio.MotorDirection, beh elevator.ElevatorBehavior, cabFloors ...int) elevator.Elevator {
 	var e elevator.Elevator
 	e.Floor = floor
@@ -32,7 +32,7 @@ func E(floor int, dir elevio.MotorDirection, beh elevator.ElevatorBehavior, cabF
 		if f < 0 || f >= constant.NumFloors {
 			panic("cab floor out of range in test helper")
 		}
-		e.Requests[f][elevio.BT_Cab] = true
+		e.Requests[f][elevio.BT_Cab] = elevator.ReqConfirmed
 	}
 	return e
 }
@@ -87,9 +87,6 @@ func assertHallResult(t *testing.T, got map[string][][]bool, want map[string][][
 // ---- tests mirrored from D ----
 
 func TestOptimalHallRequests_IdleElevatorWins(t *testing.T) {
-	// D unittest #1:
-	// Elevator 1 idle one floor away, other elevators have several cab orders => order should go to idle elevator.
-
 	states := map[string]elevator.Elevator{
 		"1": E(0, elevio.MD_Stop, elevator.EB_Idle /* no cab */),
 		"2": E(3, elevio.MD_Down, elevator.EB_DoorOpen, 0 /* cab */),
@@ -98,7 +95,7 @@ func TestOptimalHallRequests_IdleElevatorWins(t *testing.T) {
 
 	hall := hallReqs4(
 		false, false,
-		true, false, // floor 1 hall up
+		true, false,
 		false, false,
 		false, false,
 	)
@@ -119,9 +116,6 @@ func TestOptimalHallRequests_IdleElevatorWins(t *testing.T) {
 }
 
 func TestOptimalHallRequests_TwoIdleAtEndsClosestEvenWrongDir(t *testing.T) {
-	// D unittest #2 (first scenario):
-	// Two elevators idle at ends toward middle floors. Stop at closest order even if "wrong dir".
-
 	states := map[string]elevator.Elevator{
 		"1": E(0, elevio.MD_Stop, elevator.EB_Idle),
 		"2": E(3, elevio.MD_Stop, elevator.EB_Idle),
@@ -129,8 +123,8 @@ func TestOptimalHallRequests_TwoIdleAtEndsClosestEvenWrongDir(t *testing.T) {
 
 	hall := hallReqs4(
 		false, false,
-		false, true, // floor 1 hall down
-		true, false, // floor 2 hall up
+		false, true,
+		true, false,
 		false, false,
 	)
 
@@ -153,9 +147,6 @@ func TestOptimalHallRequests_TwoIdleAtEndsClosestEvenWrongDir(t *testing.T) {
 }
 
 func TestOptimalHallRequests_MovingCloserStillWins(t *testing.T) {
-	// D unittest #2 (second scenario):
-	// Change E1 idle->moving up. E1 is closer, should still get same assignment.
-
 	states := map[string]elevator.Elevator{
 		"1": E(0, elevio.MD_Up, elevator.EB_Moving),
 		"2": E(3, elevio.MD_Stop, elevator.EB_Idle),
@@ -163,8 +154,8 @@ func TestOptimalHallRequests_MovingCloserStillWins(t *testing.T) {
 
 	hall := hallReqs4(
 		false, false,
-		false, true, // floor 1 hall down
-		true, false, // floor 2 hall up
+		false, true,
+		true, false,
 		false, false,
 	)
 
@@ -187,19 +178,15 @@ func TestOptimalHallRequests_MovingCloserStillWins(t *testing.T) {
 }
 
 func TestOptimalHallRequests_CabAheadChangesDecision(t *testing.T) {
-	// D unittest #2 (third scenario):
-	// Add cab order to E1 so it has to go up anyway -> it skips "wrong direction" hall call.
-	// Expected: E1 takes floor 2 up; E2 takes floor 1 down.
-
 	states := map[string]elevator.Elevator{
-		"1": E(0, elevio.MD_Stop, elevator.EB_Idle, 2 /* cab at floor 2 */),
+		"1": E(0, elevio.MD_Stop, elevator.EB_Idle, 2),
 		"2": E(3, elevio.MD_Stop, elevator.EB_Idle),
 	}
 
 	hall := hallReqs4(
 		false, false,
-		false, true, // floor 1 hall down
-		true, false, // floor 2 hall up
+		false, true,
+		true, false,
 		false, false,
 	)
 
@@ -222,16 +209,13 @@ func TestOptimalHallRequests_CabAheadChangesDecision(t *testing.T) {
 }
 
 func TestOptimalHallRequests_MovingTowardWinsTie(t *testing.T) {
-	// D unittest #3:
-	// Two elevators same distance from an order, but one is moving toward it => moving elevator wins.
-
 	states := map[string]elevator.Elevator{
 		"27": E(1, elevio.MD_Down, elevator.EB_Moving),
 		"20": E(1, elevio.MD_Down, elevator.EB_DoorOpen),
 	}
 
 	hall := hallReqs4(
-		true, false, // floor 0 hall up
+		true, false,
 		false, false,
 		false, false,
 		false, false,
@@ -252,26 +236,22 @@ func TestOptimalHallRequests_MovingTowardWinsTie(t *testing.T) {
 }
 
 func TestOptimalHallRequests_LexicographicTieBreak(t *testing.T) {
-	// D unittest #5:
-	// Identical elevators -> assignment should always go to lexicographically lowest ID.
-
 	states := map[string]elevator.Elevator{
-		"1": E(1, elevio.MD_Up, elevator.EB_Moving, 0 /* cab */),
-		"2": E(1, elevio.MD_Stop, elevator.EB_Idle, 0 /* cab */),
-		"3": E(1, elevio.MD_Stop, elevator.EB_Idle, 0 /* cab */),
+		"1": E(1, elevio.MD_Up, elevator.EB_Moving, 0),
+		"2": E(1, elevio.MD_Stop, elevator.EB_Idle, 0),
+		"3": E(1, elevio.MD_Stop, elevator.EB_Idle, 0),
 	}
 
 	hall := hallReqs4(
-		true, false,  // floor 0 hall up
+		true, false,
 		false, false,
 		false, false,
-		false, true,  // floor 3 hall down
+		false, true,
 	)
 
 	got := OptimalHallRequests(hall, states, false)
 
 	want := map[string][][]bool{
-		// From D: "1" takes floor 3 down, "2" takes floor 0 up
 		"1": func() [][]bool {
 			a := zerosAssignment()
 			setAssign(a, 3, elevio.BT_HallDown)
@@ -289,21 +269,14 @@ func TestOptimalHallRequests_LexicographicTieBreak(t *testing.T) {
 }
 
 func TestOptimalHallRequests_TwoHallSameFloorWithCabAhead_SplitBetweenElevators(t *testing.T) {
-	// D unittest #4 (requires inDirn clear policy in D)
-	// Two hall requests at same floor, closest elevator also has cab further in same direction.
-	// Expected: split hall orders between elevators.
-
-	// This test assumes your request.ClearAtCurrentFloor behaves like D's inDirn mode.
-	// If your implementation clears differently, this might need adjustment.
-
 	states := map[string]elevator.Elevator{
-		"1": E(3, elevio.MD_Down, elevator.EB_Moving, 0 /* cab */),
+		"1": E(3, elevio.MD_Down, elevator.EB_Moving, 0),
 		"2": E(3, elevio.MD_Down, elevator.EB_Idle),
 	}
 
 	hall := hallReqs4(
 		false, false,
-		true, true, // floor 1 both up+down
+		true, true,
 		false, false,
 		false, false,
 	)
@@ -323,9 +296,8 @@ func TestOptimalHallRequests_TwoHallSameFloorWithCabAhead_SplitBetweenElevators(
 		}(),
 	}
 
-	// Use reflect check too (helpful debug) — but keep our hall-only check as canonical.
 	if !reflect.DeepEqual(len(got), len(want)) {
-		// ignore: got may include extra ids, our assertHallResult handles that.
+		// ignore
 	}
 	assertHallResult(t, got, want)
 }
