@@ -25,7 +25,7 @@ func ReqIsActive(s ReqState) bool {
 }
 
 func ReqLampOn(s ReqState) bool {
-	return s != ReqNone
+	return s == ReqConfirmed
 }
 
 const (
