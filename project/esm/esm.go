@@ -19,7 +19,7 @@ type ExternalElevator struct {
 type WorldView struct {
 	Elevators       map[int]ExternalElevator
 	OnlineElevators int
-	internal		 elevator.Elevator
+	local		 elevator.Elevator
 }
 
 func UpdateOrders(worldview *WorldView) {
@@ -32,11 +32,11 @@ func UpdateOrders(worldview *WorldView) {
 
 				if elev.status == true {
 
-					localrequest := worldview.internal.Requests[floor][buttonType]
+					localrequest := worldview.local.Requests[floor][buttonType]
 					externalrequest := elev.elevator.Requests[floor][buttonType]
 
 					if localrequest < externalrequest {
-						worldview.internal.Requests[floor][buttonType] = externalrequest
+						worldview.local.Requests[floor][buttonType] = externalrequest
 
 					} else if localrequest == externalrequest && localrequest > 0 {
 						allUpdatet += 1
@@ -44,7 +44,7 @@ func UpdateOrders(worldview *WorldView) {
 				}
 			}
 			if allUpdatet == worldview.OnlineElevators {
-				worldview.internal.Requests[floor][buttonType] += 1
+				worldview.local.Requests[floor][buttonType] += 1
 			}
 		}
 	}
@@ -94,31 +94,34 @@ func ResetTimeout(id int, worldview *WorldView) {
 	}
 }
 
+func UpdateLocal(){
+
+}
 
 
-
-func RunESM(harware chan elevator.Elevator) {
+func RunESM(hardware chan elevator.Elevator) {
 	//Denne funksjonen skal kjøres i egen gorouting, håndterer worldview, timouts og oppdatering av ordre
 
 	timers := make(chan int)
 	heartbeat := make(chan int)
 
 	var worldview WorldView
+	
+	for {
+		select {
+		case id := <-timers:
+			HandleTimeout(id, &worldview)
 
-	select {
-	case id := <-timers:
-		HandleTimeout(id, &worldview)
+		case message := <-msg:
 
-	case message := <-msg:
+			UpdateWorldView(&worldview, message.elevator, message.id, timers)
+			UpdateOrders(&worldview) 
 
-		UpdateWorldView(&worldview, message.elevator, message.id, timers)
-		UpdateOrders(&worldview) 
+		case id := <-heartbeat:
+			ResetTimeout(id, &worldview)
 
-	case id := <-heartbeat:
-		ResetTimeout(id, &worldview)
-
-	case local := <-harware:
-		worldview.internal = local
+		case local := <-hardware:
+			worldview.local = local
+		}
 	}
-
 }
