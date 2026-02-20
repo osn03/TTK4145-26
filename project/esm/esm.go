@@ -11,9 +11,9 @@ const numFloors int = constant.NumFloors
 const numButtons int = constant.NumButtons
 
 type ExternalElevator struct {
-	status   bool
-	timeout  *time.Timer
-	elevator elevator.Elevator
+	Status   bool
+	Timeout  *time.Timer
+	Elevator elevator.Elevator
 }
 
 type WorldView struct {

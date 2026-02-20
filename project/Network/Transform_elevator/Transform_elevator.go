@@ -21,7 +21,7 @@ type ElevatorMsg struct {
 	Status    bool
 	Floor     int
 	Dirn      int
-	Requests  [constant.NumFloors][constant.NumButtons]int
+	Requests  [constant.NumFloors][constant.NumButtons]elevator.ReqState
 	Behaviour int
 }
 
@@ -48,7 +48,7 @@ func Transform_back(msg ElevatorMsg) (e esm.ExternalElevator, sender_id string) 
 		msg.Sender
 }
 
-func Set_up1(e *esm.ExternalElevator) {
+func Set_up1(e *esm.ExternalElevator) (esm.ExternalElevator, string) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id string
@@ -103,10 +103,11 @@ func Set_up1(e *esm.ExternalElevator) {
 
 			e, reciver_id := Transform_back(a)
 			fmt.Printf("Received message from %s: %+v\n", reciver_id, e)
+			return e, reciver_id
 
 		}
-
 	}
+
 }
 
 func Set_up2() {
@@ -171,13 +172,13 @@ func Set_up2() {
 	}
 }
 
-/* For å teste com kan denne main-funk brukes: 
+/* For å teste com kan denne main-funk brukes:
 
 func main() {
 	var elev1 esm.ExternalElevator
 	elev1.Status = true
 	var elev2 elevator.Elevator
-	
+
 
 	elev2.Floor = 0
 	elev2.Dirn = 1
@@ -195,10 +196,8 @@ func main() {
 }
 
 
-#I case a:=<-Rx, blir ut-printen slikt (from 1 vil være id til den noden som sendte): 
+#I case a:=<-Rx, blir ut-printen slikt (from 1 vil være id til den noden som sendte):
 Received message from 1: {Status:true Elevator:{Floor:0 Dirn:1 Requests:[[0 0 0] [0 0 0] [0 0 0] [0 0 0]] Behaviour:0}}
 OBS, sender_id er en string, for å kunne bruke peers.Transmitter. I utgangspunktet ikke krise, men kan også byttes over til int om nødvendig.
 
 */
-
-
