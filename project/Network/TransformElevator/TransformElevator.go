@@ -20,9 +20,9 @@ type ElMsg struct {
 	Sender    string
 	Status    bool
 	Floor     int
-	Dirn      int
+	Dirn      elevio.MotorDirection
 	Requests  [constant.NumFloors][constant.NumButtons]elevator.ReqState
-	Behaviour int
+	Behaviour elevator.ElevatorBehavior
 }
 
 func Transform_elevator(sender_id string, e esm.ExternalElevator) ElMsg {
@@ -30,9 +30,9 @@ func Transform_elevator(sender_id string, e esm.ExternalElevator) ElMsg {
 		Sender:    sender_id,
 		Status:    e.Status,
 		Floor:     e.Elevator.Floor,
-		Dirn:      int(e.Elevator.Dirn),
+		Dirn:      e.Elevator.Dirn,
 		Requests:  e.Elevator.Requests,
-		Behaviour: int(e.Elevator.Behaviour),
+		Behaviour: e.Elevator.Behaviour,
 	}
 }
 func Transform_back(msg ElMsg) (e esm.ExternalElevator, sender_id string) {

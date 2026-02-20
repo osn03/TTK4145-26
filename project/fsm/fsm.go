@@ -26,6 +26,7 @@ func OnInitBetweenFloors(e *elevator.Elevator) {
 
 // EvaluateMovement decides what the local elevator should do next given its current request state.
 // Call this after assignments are updated (network merge) and from OnDoorTimeout when door closes.
+//trur kanskje denne må brukes i network?
 func EvaluateMovement(e *elevator.Elevator) {
 	if e.Behaviour == elevator.EB_Moving {
 		return
@@ -117,7 +118,7 @@ func OnDoorTimeout(e *elevator.Elevator) {
 	EvaluateMovement(e)
 }
 
-
+//legge til case som registrerer om mottat melding over channel fra esm og velger retning
 func RunLocalElevator(transfer chan elevator.Elevator){
 
 	var e elevator.Elevator
