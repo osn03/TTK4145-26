@@ -1,7 +1,7 @@
 package network
 
 import (
-	"project/Network/Transform_elevator"
+	"project/Network/TransformElevator"
 	"project/Network/peers"
 	"project/constant"
 	"project/elevator"
@@ -17,8 +17,27 @@ type Msg struct {
 	Behaviour int
 }
 
-func NetworkCum(in <-chan esm.ExternalElevator, outMsg chan<- Transform_elevator.Msg, outNoder chan<- peers.PeerUpdate) {
-	a, b := Transform_elevator.Set_up1(<-in)
-	outMsg = a
-	outNoder = b
+func TranslateToMsg(elMsg TransformElevator.ElMsg) Msg {
+	return Msg{
+		Sender:    elMsg.Sender,
+		Status:    elMsg.Status,
+		Floor:     elMsg.Floor,
+		Dirn:      elMsg.Dirn,
+		Requests:  elMsg.Requests,
+		Behaviour: elMsg.Behaviour,
+	}
+}
+
+func NetworkCum(in <-chan esm.ExternalElevator, outMsg chan<- Msg, outNoder chan<- peers.PeerUpdate) {
+	a, b := TransformElevator.Set_up1(<-in)
+	go func() {
+		for {
+			select {
+			case msg := <-a:
+				outMsg <- TranslateToMsg(msg)
+			case noder := <-b:
+				outNoder <- noder
+			}
+		}
+	}()
 }
