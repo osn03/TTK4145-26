@@ -6,15 +6,16 @@ import (
 	"project/constant"
 	"project/elevator"
 	"project/esm"
+	"project/elevio"
 )
 
 type Msg struct {
 	Id        string
 	Status    bool
 	Floor     int
-	Dirn      int
+	Dirn      elevio.MotorDirection
 	Requests  [constant.NumFloors][constant.NumButtons]elevator.ReqState
-	Behaviour int
+	Behaviour elevator.ElevatorBehavior
 }
 
 func TranslateToMsg(elMsg TransformElevator.ElMsg) Msg {

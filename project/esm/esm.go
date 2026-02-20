@@ -123,6 +123,7 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 
 			UpdateWorldView(&worldview, message)
 			UpdateOrders(&worldview)
+			//kjøre kostfunk for å finne ut hva min heis skal gjøre
 
 		case local := <-hardware:
 			ResetLocalTimeout(timeout)
