@@ -122,21 +122,21 @@ func ClearAtCurrentFloor(e elevator.Elevator) elevator.Elevator {
 
 	case elevio.MD_Up:
 		if !Above(e) && !elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallUp]) {
-			e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqNone
+			e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqDeleting
 		}
-		e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqNone	
+		e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqDeleting	
 
 	case elevio.MD_Down:
 		if !Below(e) && !elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallDown]) {
-			e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqNone
+			e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqDeleting
 		}
-		e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqNone
+		e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqDeleting
 
 	case elevio.MD_Stop:
 		fallthrough
 	default:
-		e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqNone
-		e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqNone
+		e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqDeleting
+		e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqDeleting
 	}
 
 	return e
