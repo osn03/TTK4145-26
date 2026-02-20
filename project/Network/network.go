@@ -9,7 +9,7 @@ import (
 )
 
 type Msg struct {
-	Sender    string
+	Id        string
 	Status    bool
 	Floor     int
 	Dirn      int
@@ -19,7 +19,7 @@ type Msg struct {
 
 func TranslateToMsg(elMsg TransformElevator.ElMsg) Msg {
 	return Msg{
-		Sender:    elMsg.Sender,
+		Id:        elMsg.Sender,
 		Status:    elMsg.Status,
 		Floor:     elMsg.Floor,
 		Dirn:      elMsg.Dirn,

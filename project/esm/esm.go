@@ -1,6 +1,7 @@
 package esm
 
 import (
+	network "project/Network"
 	"project/Network/network"
 	"project/constant"
 	"project/elevator"
@@ -17,7 +18,7 @@ type ExternalElevator struct {
 }
 
 type WorldView struct {
-	Elevators       map[int]ExternalElevator
+	Elevators       map[string]ExternalElevator
 	OnlineElevators int
 	local           elevator.Elevator
 }
@@ -50,23 +51,29 @@ func UpdateOrders(worldview *WorldView) {
 	}
 }
 
-func UpdateWorldView(worldview *WorldView, extelevator ExternalElevator, id int, out chan<- int) {
+func UpdateWorldView(worldview *WorldView, message network.Msg) {
 
-	if existing, ok := worldview.Elevators[id]; ok {
+	if existing, ok := worldview.Elevators[message.Id]; ok {
 
-		existing.Elevator = extelevator.Elevator
-		existing.Status = extelevator.Status
+		existing.Elevator = elevator.Elevator{
+			Floor:     message.Floor,
+			Dirn:      message.Dirn,
+			Requests:  message.Requests,
+			Behaviour: message.Behaviour,
+		}
 
-		worldview.Elevators[id] = existing
+		existing.Status = message.Status
+
+		worldview.Elevators[message.Id] = existing
 		return
 	}
 
-	AddElevator(worldview, id, extelevator.Elevator, out)
+	AddElevator(worldview, message)
 
 	//Id must be int, Status must be bool, Elevator must be elevator.Elevator
 }
 
-func AddElevator(worldview *WorldView, id int, elevator elevator.Elevator, out chan<- int) {
+func AddElevator(worldview *WorldView) {
 
 	worldview.Elevators[id] = ExternalElevator{
 		Status:   true,
@@ -90,7 +97,7 @@ func UpdateLocal(worldview *WorldView, local elevator.Elevator) {
 	worldview.local = local
 }
 
-func ShareLocalStates(out chan ExternalElevator, localstatus bool, local elevator.Elevator){
+func ShareLocalStates(out chan ExternalElevator, localstatus bool, local elevator.Elevator) {
 	outmessage := ExternalElevator{Status: localstatus, Elevator: local}
 	out <- outmessage
 }
@@ -114,7 +121,7 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 
 		case message := <-in:
 
-			UpdateWorldView(&worldview, message.ExternalElevator, message.id)
+			UpdateWorldView(&worldview, message)
 			UpdateOrders(&worldview)
 
 		case local := <-hardware:
