@@ -48,7 +48,7 @@ func Transform_back(msg ElevatorMsg) (e esm.ExternalElevator, sender_id string) 
 		msg.Sender
 }
 
-func Set_up1(e *esm.ExternalElevator) ElevatorMsg {
+func Set_up1(e esm.ExternalElevator) ElevatorMsg {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id string
@@ -80,7 +80,7 @@ func Set_up1(e *esm.ExternalElevator) ElevatorMsg {
 	// The example message. We just send one of these every second.
 	go func() {
 		for {
-			msg := Transform_elevator(id, *e)
+			msg := Transform_elevator(id, e)
 			Tx <- msg
 			time.Sleep(5000 * time.Millisecond)
 		}
