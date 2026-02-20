@@ -149,7 +149,11 @@ func OnDoorTimeout(e *elevator.Elevator) {
 }
 
 
-func RunLocalElevator(e *elevator.Elevator){
+func RunLocalElevator(transfer chan elevator.Elevator){
+
+	var e elevator.Elevator
+
+	OnInitBetweenFloors(&e)
 
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
@@ -168,17 +172,23 @@ func RunLocalElevator(e *elevator.Elevator){
 		case a := <-drv_buttons:
 			fmt.Printf("%+v\n", a)
 			elevio.SetButtonLamp(a.Button, a.Floor, true)
-			OnRequestButtonPress(e, a.Floor, a.Button)
+			OnRequestButtonPress(&e, a.Floor, a.Button)
+
+			transfer <- e
 
 		case a := <-drv_floors:
 			fmt.Printf("%+v\n", a)
 
-			OnFloorArrival(e, a)
+			OnFloorArrival(&e, a)
+
+			transfer <- e
 
 		case a := <-time_timeout:
 			fmt.Printf("%+v\n", a)
 			timer.Stop()
-			OnDoorTimeout(e)
+			OnDoorTimeout(&e)
+
+			transfer <- e
 
 		case a := <-drv_obstr:
 			fmt.Printf("%+v\n", a)
@@ -191,6 +201,8 @@ func RunLocalElevator(e *elevator.Elevator){
 				//restarts timer that will trigger door close
 			}
 
+			transfer <- e
+
 		case a := <-drv_stop:
 			fmt.Printf("%+v\n", a)
 			if a {
@@ -199,11 +211,12 @@ func RunLocalElevator(e *elevator.Elevator){
 				e.Dirn = elevio.MD_Stop
 				//sets states to match stopped elevator
 			} else {
-				pair := request.ChooseDirection(*e)
+				pair := request.ChooseDirection(e)
 				e.Dirn = pair.Dirn
 				e.Behaviour = pair.Behaviour
 				elevio.SetMotorDirection(e.Dirn)
 			}
+			transfer <- e
 
 		}
 	}
