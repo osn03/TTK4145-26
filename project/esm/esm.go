@@ -11,15 +11,15 @@ const numFloors int = constant.NumFloors
 const numButtons int = constant.NumButtons
 
 type ExternalElevator struct {
-	status   bool
-	timeout  *time.Timer
-	elevator elevator.Elevator
+	Status   bool
+	Timeout  *time.Timer
+	Elevator elevator.Elevator
 }
 
 type WorldView struct {
 	Elevators       map[int]ExternalElevator
 	OnlineElevators int
-	internal		 elevator.Elevator
+	internal        elevator.Elevator
 }
 
 func UpdateOrders(worldview *WorldView) {
@@ -94,9 +94,6 @@ func ResetTimeout(id int, worldview *WorldView) {
 	}
 }
 
-
-
-
 func RunESM(harware chan elevator.Elevator) {
 	//Denne funksjonen skal kjøres i egen gorouting, håndterer worldview, timouts og oppdatering av ordre
 
@@ -112,7 +109,7 @@ func RunESM(harware chan elevator.Elevator) {
 	case message := <-msg:
 
 		UpdateWorldView(&worldview, message.elevator, message.id, timers)
-		UpdateOrders(&worldview) 
+		UpdateOrders(&worldview)
 
 	case id := <-heartbeat:
 		ResetTimeout(id, &worldview)
