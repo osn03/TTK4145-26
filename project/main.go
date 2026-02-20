@@ -1,7 +1,8 @@
 package main
 
 import (
-	network "project/Network"
+	"project/Network"
+	"project/Network/peers"
 	"project/constant"
 	"project/elevator"
 	"project/elevio"
@@ -17,10 +18,11 @@ func main() {
 	elevio.Init("localhost:15657", numFloors)
 
 	out := make(chan esm.ExternalElevator)
-	in := make(chan network.Msg)
+	elevatorin := make(chan network.Msg)
+	statusin := make(chan peers.PeerUpdate)
 	local := make(chan elevator.Elevator)
 
-	go network.NetworkCum(in, out)
+	go network.NetworkCum(out, elevatorin, statusin)
 	go fsm.RunLocalElevator(local)
 	//go esm.RunESM(local, in, out)
 
