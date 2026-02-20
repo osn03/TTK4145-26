@@ -21,12 +21,10 @@ const (
 )
 
 func ReqIsActive(s ReqState) bool {
-	return s == ReqUnconfirmed || s == ReqConfirmed
-}
-
-func ReqLampOn(s ReqState) bool {
 	return s == ReqConfirmed
 }
+
+
 
 const (
 	EB_Idle ElevatorBehavior = iota

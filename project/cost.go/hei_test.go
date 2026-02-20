@@ -1,4 +1,4 @@
-package cost_fns
+package cost
 
 import (
 	"reflect"

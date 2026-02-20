@@ -1,4 +1,4 @@
-package cost_fns
+package cost
 
 import (
 	"project/constant"
@@ -14,10 +14,13 @@ import (
 // ==========================
 //
 
+
 type Req struct {
 	Active     bool
 	AssignedTo string
 }
+
+
 
 type State struct {
 	ID    string
@@ -31,6 +34,9 @@ type State struct {
 // ==========================
 //
 
+// OptimalHallRequests simulates all elevators forward in time and assigns each active hall request
+// to the elevator that will serve it first (tie-broken by simulated time then lexicographic ID).
+// If includeCab is true, the returned matrix includes a third column with the elevator's current cab requests.
 func OptimalHallRequests(
 	hallReqs [][]bool,
 	elevatorStates map[string]elevator.Elevator,
@@ -43,6 +49,7 @@ func OptimalHallRequests(
 		panic("No elevator states provided")
 	}
 
+	// Basic input validation (floor bounds and "moving out of bounds" sanity).
 	for id, s := range elevatorStates {
 		if len(s.Requests) != numFloors {
 			panic("Hall and cab requests do not have same length")
@@ -50,26 +57,25 @@ func OptimalHallRequests(
 		if s.Floor < 0 || s.Floor >= numFloors {
 			panic("Elevator at invalid floor")
 		}
-		
 		if s.Behaviour == elevator.EB_Moving {
 			next := s.Floor + int(s.Dirn)
 			if next < 0 || next >= numFloors {
 				panic("Elevator " + id + " is moving out of bounds")
 			}
 		}
-
-
 	}
 
+	// Convert hallReqs into internal Req structs and build a stable, ID-sorted list of simulation states.
 	reqs := toReq(hallReqs)
 	states := initialStates(elevatorStates)
 
+	// Apply an initial half-step so elevators start the event simulation aligned with D's timing model.
 	for i := range states {
 		performInitialMove(&states[i], reqs)
 	}
 
+	// Event-driven simulation loop: always advance the elevator with the earliest simulated time.
 	for {
-
 		sort.Slice(states, func(i, j int) bool {
 			if states[i].Time != states[j].Time {
 				return states[i].Time < states[j].Time
@@ -77,13 +83,13 @@ func OptimalHallRequests(
 			return states[i].ID < states[j].ID
 		})
 
-
 		done := true
-
 		if anyUnassigned(reqs) {
 			done = false
 		}
 
+		// Fast-path: if all remaining unassigned hall calls are immediately assignable (no cab calls, etc.),
+		// assign them without further simulation.
 		if unvisitedAreImmediatelyAssignable(reqs, states) {
 			assignImmediate(reqs, states)
 			done = true
@@ -93,33 +99,35 @@ func OptimalHallRequests(
 			break
 		}
 
+		// Simulate exactly one "event step" for the earliest elevator in time.
 		performSingleMove(&states[0], reqs)
 	}
 
+	// Build output map: per elevator ID, a per-floor [2] (hall) or [3] (hall+cab) boolean matrix.
 	result := make(map[string][][]bool)
 
 	for id := range elevatorStates {
-
 		buttons := 2
 		if includeCab {
 			buttons = 3
 		}
 
 		result[id] = make([][]bool, numFloors)
-
 		for f := 0; f < numFloors; f++ {
 			result[id][f] = make([]bool, buttons)
 
+			// Optional third column mirrors whether the cab request at that floor is currently active.
 			if includeCab {
 				result[id][f][2] = elevator.ReqIsActive(elevatorStates[id].Requests[f][elevio.BT_Cab])
 			}
 		}
 	}
 
+	// Write final hall assignments into the output matrix.
 	for f := 0; f < numFloors; f++ {
 		for c := 0; c < 2; c++ {
 			if reqs[f][c].Active {
-				id := reqs[f][c].AssignedTo	
+				id := reqs[f][c].AssignedTo
 				if id != "" {
 					result[id][f][c] = true
 				}
@@ -136,6 +144,7 @@ func OptimalHallRequests(
 // ==========================
 //
 
+// toReq converts a hall request boolean matrix [floor][2] into internal Req structs with empty assignments.
 func toReq(hallReqs [][]bool) [][]Req {
 	numFloors := len(hallReqs)
 	r := make([][]Req, numFloors)
@@ -143,7 +152,7 @@ func toReq(hallReqs [][]bool) [][]Req {
 	for f := 0; f < numFloors; f++ {
 		r[f] = make([]Req, 2)
 		for b := 0; b < 2; b++ {
-			r[f][b] = Req{
+			r[f][b] = Req{/ corresponds to the microsecond offset used for tie-breaking in the D version
 				Active:     hallReqs[f][b],
 				AssignedTo: "",
 			}
@@ -152,6 +161,8 @@ func toReq(hallReqs [][]bool) [][]Req {
 	return r
 }
 
+// initialStates creates a deterministic slice of simulation states, sorted by elevator ID,
+// and seeds each elevator with a small increasing initial Time to enforce lexicographic tie-breaking.
 func initialStates(states map[string]elevator.Elevator) []State {
 	ids := make([]string, 0, len(states))
 	for id := range states {
@@ -160,26 +171,25 @@ func initialStates(states map[string]elevator.Elevator) []State {
 	sort.Strings(ids)
 
 	result := make([]State, len(ids))
-
 	for i, id := range ids {
 		result[i] = State{
 			ID:    id,
 			State: copyState(states[id]),
-			Time:  int64(i), // tilsvarer usecs i D
+			Time:  int64(i), 
 		}
 	}
 	return result
 }
+
 
 func copyState(s elevator.Elevator) elevator.Elevator {
 	return elevator.Elevator{
 		Behaviour: s.Behaviour,
 		Floor:     s.Floor,
 		Dirn:      s.Dirn,
-		Requests:  s.Requests, 
+		Requests:  s.Requests,
 	}
 }
-
 
 //
 // ==========================
@@ -187,6 +197,7 @@ func copyState(s elevator.Elevator) elevator.Elevator {
 // ==========================
 //
 
+// anyUnassigned returns true if there exists any active hall request that has not yet been assigned to an elevator.
 func anyUnassigned(reqs [][]Req) bool {
 	for _, floor := range reqs {
 		for _, r := range floor {
@@ -204,6 +215,10 @@ func anyUnassigned(reqs [][]Req) bool {
 // ==========================
 //
 
+// performInitialMove applies the initial half-step timing normalization:
+// - doorOpen: consume half door time, then treat as idle
+// - idle: immediately take any hall requests at current floor
+// - moving: advance one floor (half travel time), representing "arriving" at the next floor in the simulation model.
 func performInitialMove(s *State, reqs [][]Req) {
 	numFloors := len(reqs)
 
@@ -224,7 +239,6 @@ func performInitialMove(s *State, reqs [][]Req) {
 	case elevator.EB_Moving:
 		next := s.State.Floor + int(s.State.Dirn)
 		if next < 0 || next >= numFloors {
-			// Robust fallback (shouldn't happen if input validation is correct)
 			s.State.Dirn = elevio.MD_Stop
 			s.State.Behaviour = elevator.EB_Idle
 			return
@@ -234,18 +248,22 @@ func performInitialMove(s *State, reqs [][]Req) {
 	}
 }
 
-
 //
 // ==========================
 // SINGLE MOVE
 // ==========================
 //
 
+// performSingleMove advances the simulation for a single elevator by one event:
+// - moving: either stop (door cycle + clear requests) or continue (travel one floor)
+// - idle/doorOpen: choose direction; either stop and clear at current floor or start moving one floor.
 func performSingleMove(s *State, reqs [][]Req) {
 	numFloors := len(reqs)
 
+	
 	e := withUnassignedRequests(*s, reqs)
 
+	// Callback used by the request-clearing function to mark hall assignments and mutate cab state.
 	onClearRequest := func(btn elevio.ButtonType) {
 		switch btn {
 		case elevio.BT_HallUp, elevio.BT_HallDown:
@@ -286,7 +304,6 @@ func performSingleMove(s *State, reqs [][]Req) {
 				s.State.Behaviour = elevator.EB_Idle
 			}
 		} else {
-			
 			next := s.State.Floor + int(s.State.Dirn)
 			if next < 0 || next >= numFloors {
 				s.State.Dirn = elevio.MD_Stop
@@ -301,12 +318,12 @@ func performSingleMove(s *State, reqs [][]Req) {
 	}
 }
 
-
 //
 // ==========================
 // IMMEDIATE ASSIGN
 // ==========================
 //
+
 
 func elevatorHasAnyCab(e elevator.Elevator) bool {
 	for f := 0; f < constant.NumFloors; f++ {
@@ -317,15 +334,15 @@ func elevatorHasAnyCab(e elevator.Elevator) bool {
 	return false
 }
 
+// unvisitedAreImmediatelyAssignable checks a special fast-path condition where remaining unassigned hall requests
+// can be assigned without simulation (no cab calls anywhere, no floors with both hall buttons active, and each
+// unassigned request is on a floor where an elevator is currently present).
 func unvisitedAreImmediatelyAssignable(reqs [][]Req, states []State) bool {
-	// 1) Hvis noen heis har noen cab-request -> false
 	for _, s := range states {
 		if elevatorHasAnyCab(s.State) {
 			return false
 		}
 	}
-
-	// 2) Ingen etasje kan ha både hallUp og hallDown aktive samtidig
 	for _, floorReqs := range reqs {
 		activeCount := 0
 		for _, r := range floorReqs {
@@ -337,8 +354,6 @@ func unvisitedAreImmediatelyAssignable(reqs [][]Req, states []State) bool {
 			return false
 		}
 	}
-
-	// 3) Alle unassigned hall-requests må være på en etasje hvor det står en heis (som også har 0 cab)
 	for f, floorReqs := range reqs {
 		for _, r := range floorReqs {
 			if r.Active && r.AssignedTo == "" {
@@ -359,8 +374,8 @@ func unvisitedAreImmediatelyAssignable(reqs [][]Req, states []State) bool {
 	return true
 }
 
-
-
+// assignImmediate assigns any remaining unassigned hall requests directly to an elevator standing at the same floor,
+// and advances that elevator's simulated time by one door cycle to reflect serving the request.
 func assignImmediate(reqs [][]Req, states []State) {
 	for f := range reqs {
 		for c := range reqs[f] {
@@ -368,7 +383,6 @@ func assignImmediate(reqs [][]Req, states []State) {
 				continue
 			}
 
-			// Assign to first elevator currently at floor f with NO cab requests anywhere
 			for i := range states {
 				if states[i].State.Floor != f {
 					continue
@@ -385,29 +399,27 @@ func assignImmediate(reqs [][]Req, states []State) {
 	}
 }
 
-
-
 //
 // ==========================
-// ELEVATOR WRAPPER (STUB)
+// ELEVATOR WRAPPER
 // ==========================
 //
 
-
-
-
+// withUnassignedRequests builds a temporary elevator snapshot for decision logic, containing:
+// - all cab requests from the elevator state
+// - hall requests that are either unassigned or already assigned to this elevator ID.
 func withUnassignedRequests(s State, reqs [][]Req) elevator.Elevator {
 	var e elevator.Elevator
 	e.Floor = s.State.Floor
 	e.Dirn = s.State.Dirn
 	e.Behaviour = s.State.Behaviour
 
-	// Cab
+	// Copy cab requests as-is from the elevator snapshot.
 	for f := 0; f < constant.NumFloors; f++ {
 		e.Requests[f][elevio.BT_Cab] = s.State.Requests[f][elevio.BT_Cab]
 	}
 
-	// Hall 
+	// Include hall requests that are unassigned or assigned to this elevator.
 	for f := 0; f < constant.NumFloors; f++ {
 		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
 			r := reqs[f][int(btn)]
@@ -416,5 +428,6 @@ func withUnassignedRequests(s State, reqs [][]Req) elevator.Elevator {
 			}
 		}
 	}
+
 	return e
 }
