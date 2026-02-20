@@ -8,7 +8,7 @@ import (
 	"project/esm"
 )
 
-type ElevatorMsg struct {
+type Msg struct {
 	Sender    string
 	Status    bool
 	Floor     int
@@ -17,9 +17,8 @@ type ElevatorMsg struct {
 	Behaviour int
 }
 
-func NetworkCum(in <-chan esm.ExternalElevator, outMsg chan<- Transform_elevator.ElevatorMsg, outNoder chan<- peers.PeerUpdate) {
+func NetworkCum(in <-chan esm.ExternalElevator, outMsg chan<- Transform_elevator.Msg, outNoder chan<- peers.PeerUpdate) {
 	a, b := Transform_elevator.Set_up1(<-in)
 	outMsg = a
 	outNoder = b
-
 }
