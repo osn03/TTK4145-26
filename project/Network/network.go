@@ -5,6 +5,7 @@ import (
 	"project/esm"
 )
 
-func NetworkCum(e *esm.ExternalElevator) (esm.ExternalElevator, string) {
-	return Transform_elevator.Set_up1(e)
+func NetworkCum(e *esm.ExternalElevator, out chan<- Transform_elevator.ElevatorMsg) {
+	a := Transform_elevator.Set_up1(e)
+	out <- a
 }

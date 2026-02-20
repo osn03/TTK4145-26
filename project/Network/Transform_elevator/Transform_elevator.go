@@ -48,7 +48,7 @@ func Transform_back(msg ElevatorMsg) (e esm.ExternalElevator, sender_id string) 
 		msg.Sender
 }
 
-func Set_up1(e *esm.ExternalElevator) (esm.ExternalElevator, string) {
+func Set_up1(e *esm.ExternalElevator) ElevatorMsg {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id string
@@ -101,9 +101,7 @@ func Set_up1(e *esm.ExternalElevator) (esm.ExternalElevator, string) {
 				continue
 			}
 
-			e, reciver_id := Transform_back(a)
-			fmt.Printf("Received message from %s: %+v\n", reciver_id, e)
-			return e, reciver_id
+			return a
 
 		}
 	}
