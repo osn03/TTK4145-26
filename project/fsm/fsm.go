@@ -23,42 +23,60 @@ func OnInitBetweenFloors(e *elevator.Elevator) {
 	e.Behaviour = elevator.EB_Moving
 }
 
-func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.ButtonType) {
-	fmt.Printf("\n\nFSMOnRequestButtonPress(%d, %s)\n", floor, elevator.ButtonToString(btnType))
-	elevator.ElevatorPrint(*e)
+
+// EvaluateMovement decides what the local elevator should do next given its current request state.
+// Call this after assignments are updated (network merge) and from OnDoorTimeout when door closes.
+func EvaluateMovement(e *elevator.Elevator) {
+	if e.Behaviour == elevator.EB_Moving {
+		return
+	}
+
+	if elevio.GetObstruction() {
+		e.Dirn = elevio.MD_Stop
+		e.Behaviour = elevator.EB_DoorOpen
+		elevio.SetMotorDirection(elevio.MD_Stop)
+		elevio.SetDoorOpenLamp(true)
+		timer.Start(constant.DoorOpenDurationMS)
+		return
+	}
+
+	pair := request.ChooseDirection(*e)
+	e.Dirn = pair.Dirn
+	e.Behaviour = pair.Behaviour
 
 	switch e.Behaviour {
+
 	case elevator.EB_DoorOpen:
-		if request.ShouldClearImmediately(*e, floor, btnType) {
-			timer.Start(constant.DoorOpenDurationMS)
-		} else {
-			e.Requests[floor][btnType] = 1
-		}
+		elevio.SetMotorDirection(elevio.MD_Stop)
+		elevio.SetDoorOpenLamp(true)
+		timer.Start(constant.DoorOpenDurationMS)
+
+		// IMPORTANT: this must NOT set to 0 directly in your distributed model.
+		// It should transition active -> ReqDeleting.
+		*e = request.ClearAtCurrentFloor(*e)
+
+		SetAllLights(*e)
 
 	case elevator.EB_Moving:
-		e.Requests[floor][btnType] = 1
+		elevio.SetDoorOpenLamp(false)
+		elevio.SetMotorDirection(e.Dirn)
 
 	case elevator.EB_Idle:
-		e.Requests[floor][btnType] = 1
-		pair := request.ChooseDirection(*e)
-		e.Dirn = pair.Dirn
-		e.Behaviour = pair.Behaviour
+		elevio.SetDoorOpenLamp(false)
+		elevio.SetMotorDirection(elevio.MD_Stop)
+	}
+}
 
-		switch pair.Behaviour {
-		case elevator.EB_DoorOpen:
-			elevio.SetDoorOpenLamp(true)
-			timer.Start(constant.DoorOpenDurationMS)
-			*e = request.ClearAtCurrentFloor(*e)
-		case elevator.EB_Moving:
-			elevio.SetMotorDirection(e.Dirn)
-		case elevator.EB_Idle:
-			// nothing to do
-		}
+func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.ButtonType) {
+
+	switch e.Requests[floor][btnType] {
+	case elevator.ReqNone, elevator.ReqDeleting:
+		e.Requests[floor][btnType] = elevator.ReqUnconfirmed
+	default:
+		// already active (unconfirmed/confirmed), do nothing
 	}
 
 	SetAllLights(*e)
-	fmt.Println("\nNew state:")
-	elevator.ElevatorPrint(*e)
 }
 
 func OnFloorArrival(e *elevator.Elevator, newFloor int) {
@@ -92,62 +110,13 @@ func OnFloorArrival(e *elevator.Elevator, newFloor int) {
 }
 
 func OnDoorTimeout(e *elevator.Elevator) {
-	fmt.Println("\n\nFSMOnDoorTimeout()")
-	elevator.ElevatorPrint(*e)
-
-	switch e.Behaviour {
-
-	case elevator.EB_DoorOpen:
-
-		// NEW: obstruction policy belongs in FSM (not request logic)
-		if elevio.GetObstruction() {
-			// Keep door open, motor stopped, restart timer
-			e.Dirn = elevio.MD_Stop
-			e.Behaviour = elevator.EB_DoorOpen
-
-			elevio.SetMotorDirection(elevio.MD_Stop)
-			elevio.SetDoorOpenLamp(true)
-			timer.Start(constant.DoorOpenDurationMS)
-
-			// Optional: lights unchanged, but you can refresh if you want:
-			SetAllLights(*e)
-
-			fmt.Println("\nNew state (obstructed):")
-			elevator.ElevatorPrint(*e)
-			return
-		}
-
-		// Normal flow
-		pair := request.ChooseDirection(*e)
-		e.Dirn = pair.Dirn
-		e.Behaviour = pair.Behaviour
-
-		switch e.Behaviour {
-
-		case elevator.EB_DoorOpen:
-			timer.Start(constant.DoorOpenDurationMS)
-			*e = request.ClearAtCurrentFloor(*e)
-			SetAllLights(*e)
-
-		case elevator.EB_Moving:
-			elevio.SetDoorOpenLamp(false)
-			elevio.SetMotorDirection(e.Dirn)
-
-		case elevator.EB_Idle:
-			elevio.SetDoorOpenLamp(false)
-			elevio.SetMotorDirection(elevio.MD_Stop)
-			// Optional: SetAllLights(*e)
-
-		}
-
-	default:
-		// Do nothing for other behaviours
+	if e.Behaviour != elevator.EB_DoorOpen {
+		return
 	}
+	elevio.SetDoorOpenLamp(false)
 
-	fmt.Println("\nNew state:")
-	elevator.ElevatorPrint(*e)
+	EvaluateMovement(e)
 }
-
 
 func RunLocalElevator(e *elevator.Elevator){
 

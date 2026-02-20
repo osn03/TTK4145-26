@@ -49,7 +49,6 @@ func OptimalHallRequests(
 		panic("No elevator states provided")
 	}
 
-	// Basic input validation (floor bounds and "moving out of bounds" sanity).
 	for id, s := range elevatorStates {
 		if len(s.Requests) != numFloors {
 			panic("Hall and cab requests do not have same length")
@@ -65,16 +64,14 @@ func OptimalHallRequests(
 		}
 	}
 
-	// Convert hallReqs into internal Req structs and build a stable, ID-sorted list of simulation states.
+
 	reqs := toReq(hallReqs)
 	states := initialStates(elevatorStates)
 
-	// Apply an initial half-step so elevators start the event simulation aligned with D's timing model.
 	for i := range states {
 		performInitialMove(&states[i], reqs)
 	}
 
-	// Event-driven simulation loop: always advance the elevator with the earliest simulated time.
 	for {
 		sort.Slice(states, func(i, j int) bool {
 			if states[i].Time != states[j].Time {
@@ -103,7 +100,7 @@ func OptimalHallRequests(
 		performSingleMove(&states[0], reqs)
 	}
 
-	// Build output map: per elevator ID, a per-floor [2] (hall) or [3] (hall+cab) boolean matrix.
+
 	result := make(map[string][][]bool)
 
 	for id := range elevatorStates {
@@ -197,7 +194,6 @@ func copyState(s elevator.Elevator) elevator.Elevator {
 // ==========================
 //
 
-// anyUnassigned returns true if there exists any active hall request that has not yet been assigned to an elevator.
 func anyUnassigned(reqs [][]Req) bool {
 	for _, floor := range reqs {
 		for _, r := range floor {
