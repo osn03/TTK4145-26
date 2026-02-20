@@ -1,4 +1,4 @@
-package Transform_elevator
+package TransformElevator
 
 import (
 	"flag"
@@ -16,7 +16,7 @@ import (
 // Note that all members we want to transmit must be public. Any private members
 //
 //	will be received as zero-values.
-type Msg struct {
+type ElMsg struct {
 	Sender    string
 	Status    bool
 	Floor     int
@@ -25,8 +25,8 @@ type Msg struct {
 	Behaviour int
 }
 
-func Transform_elevator(sender_id string, e esm.ExternalElevator) Msg {
-	return Msg{
+func Transform_elevator(sender_id string, e esm.ExternalElevator) ElMsg {
+	return ElMsg{
 		Sender:    sender_id,
 		Status:    e.Status,
 		Floor:     e.Elevator.Floor,
@@ -35,7 +35,7 @@ func Transform_elevator(sender_id string, e esm.ExternalElevator) Msg {
 		Behaviour: int(e.Elevator.Behaviour),
 	}
 }
-func Transform_back(msg Msg) (e esm.ExternalElevator, sender_id string) {
+func Transform_back(msg ElMsg) (e esm.ExternalElevator, sender_id string) {
 	return esm.ExternalElevator{
 			Status: msg.Status,
 			Elevator: elevator.Elevator{
@@ -48,7 +48,7 @@ func Transform_back(msg Msg) (e esm.ExternalElevator, sender_id string) {
 		msg.Sender
 }
 
-func Set_up1(e esm.ExternalElevator) (outMsg chan Msg, outNoder chan peers.PeerUpdate) {
+func Set_up1(e esm.ExternalElevator) (outMsg chan ElMsg, outNoder chan peers.PeerUpdate) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id string
@@ -69,8 +69,8 @@ func Set_up1(e esm.ExternalElevator) (outMsg chan Msg, outNoder chan peers.PeerU
 	go peers.Receiver(15647, peerUpdateCh)
 
 	// We make channels for sending and receiving our custom data types
-	Tx := make(chan Msg)
-	Rx := make(chan Msg)
+	Tx := make(chan ElMsg)
+	Rx := make(chan ElMsg)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
@@ -87,7 +87,7 @@ func Set_up1(e esm.ExternalElevator) (outMsg chan Msg, outNoder chan peers.PeerU
 	}()
 
 	returnNoder := make(chan peers.PeerUpdate)
-	returnMsg := make(chan Msg)
+	returnMsg := make(chan ElMsg)
 
 	fmt.Println("Started")
 	for {
@@ -135,8 +135,8 @@ func Set_up2() {
 	go peers.Receiver(15647, peerUpdateCh)
 
 	// We make channels for sending and receiving our custom data types
-	//Tx := make(chan ElevatorMsg)
-	Rx := make(chan Msg)
+	//Tx := make(chan ElMsg)
+	Rx := make(chan ElMsg)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
