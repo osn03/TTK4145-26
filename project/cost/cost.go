@@ -152,7 +152,7 @@ func toReq(hallReqs [][]bool) [][]Req {
 	for f := 0; f < numFloors; f++ {
 		r[f] = make([]Req, 2)
 		for b := 0; b < 2; b++ {
-			r[f][b] = Req{/ corresponds to the microsecond offset used for tie-breaking in the D version
+			r[f][b] = Req{
 				Active:     hallReqs[f][b],
 				AssignedTo: "",
 			}
