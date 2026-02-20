@@ -48,7 +48,7 @@ func Transform_back(msg ElevatorMsg) (e esm.ExternalElevator, sender_id string) 
 		msg.Sender
 }
 
-func Set_up1(e esm.ExternalElevator) ElevatorMsg {
+func Set_up1(e esm.ExternalElevator) (outMsg chan ElevatorMsg, outNoder chan peers.PeerUpdate) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id string
@@ -86,6 +86,9 @@ func Set_up1(e esm.ExternalElevator) ElevatorMsg {
 		}
 	}()
 
+	returnNoder := make(chan peers.PeerUpdate)
+	returnMsg := make(chan ElevatorMsg)
+
 	fmt.Println("Started")
 	for {
 		select {
@@ -94,6 +97,8 @@ func Set_up1(e esm.ExternalElevator) ElevatorMsg {
 			fmt.Printf("  Peers:    %q\n", p.Peers)
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
+			returnNoder <- p
+			return returnMsg, returnNoder
 
 		case a := <-Rx:
 
@@ -101,7 +106,8 @@ func Set_up1(e esm.ExternalElevator) ElevatorMsg {
 				continue
 			}
 
-			return a
+			returnMsg <- a
+			return returnMsg, returnNoder
 
 		}
 	}
