@@ -51,8 +51,7 @@ func EvaluateMovement(e *elevator.Elevator) {
 		elevio.SetDoorOpenLamp(true)
 		timer.Start(constant.DoorOpenDurationMS)
 
-		// IMPORTANT: this must NOT set to 0 directly in your distributed model.
-		// It should transition active -> ReqDeleting.
+		
 		*e = request.ClearAtCurrentFloor(*e)
 
 		SetAllLights(*e)

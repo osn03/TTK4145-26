@@ -181,7 +181,8 @@ func initialStates(states map[string]elevator.Elevator) []State {
 
 func copyState(s elevator.Elevator) elevator.Elevator {
 	return elevator.Elevator{
-		Behaviour: s.Behaviour,
+		Behaviour: s.Behaviour,// IMPORTANT: this must NOT set to 0 directly in your distributed model.
+		// It should transition active -> ReqDeleting.
 		Floor:     s.Floor,
 		Dirn:      s.Dirn,
 		Requests:  s.Requests,
