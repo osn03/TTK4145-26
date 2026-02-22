@@ -9,13 +9,6 @@ import (
 	"project/timer"
 )
 
-func SetAllLights(e elevator.Elevator) {
-	for floor := 0; floor < constant.NumFloors; floor++ {
-		for button := 0; button < constant.NumButtons; button++ {
-			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == elevator.ReqConfirmed)
-		}
-	}
-}
 
 func OnInitBetweenFloors(e *elevator.Elevator) {
 	elevio.SetMotorDirection(elevio.MD_Down)
@@ -55,7 +48,7 @@ func EvaluateMovement(e *elevator.Elevator) {
 		
 		*e = request.ClearAtCurrentFloor(*e)
 
-		SetAllLights(*e)
+		
 
 	case elevator.EB_Moving:
 		elevio.SetDoorOpenLamp(false)
@@ -76,7 +69,7 @@ func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.Button
 		// already active (unconfirmed/confirmed), do nothing
 	}
 
-	SetAllLights(*e)
+	
 }
 
 func OnFloorArrival(e *elevator.Elevator, newFloor int) {
@@ -97,7 +90,7 @@ func OnFloorArrival(e *elevator.Elevator, newFloor int) {
 
 			timer.Start(constant.DoorOpenDurationMS)
 
-			SetAllLights(*e)
+			
 
 			e.Behaviour = elevator.EB_DoorOpen
 		}

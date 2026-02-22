@@ -1,8 +1,7 @@
 package esm
 
 import (
-	network "project/Network"
-	"project/Network/network"
+	"project/network"
 	"project/constant"
 	"project/elevator"
 	"project/elevio"
@@ -32,7 +31,7 @@ func UpdateOrders(worldview *WorldView) {
 
 			allUpdatet := 0
 
-			for id, elev := range worldview.Elevators {
+			for _, elev := range worldview.Elevators {
 
 				if elev.Status == true {
 
@@ -42,13 +41,17 @@ func UpdateOrders(worldview *WorldView) {
 					if localrequest < externalrequest {
 						worldview.local.Requests[floor][buttonType] = externalrequest
 
-					} else if localrequest == externalrequest && localrequest > 0 {
+					} else if localrequest == externalrequest && (localrequest == elevator.ReqUnconfirmed || localrequest == elevator.ReqDeleting) {
 						allUpdatet += 1
 					}
 				}
 			}
 			if allUpdatet == worldview.OnlineElevators {
-				worldview.local.Requests[floor][buttonType] += 1
+				if worldview.local.Requests[floor][buttonType] == elevator.ReqDeleting {
+					worldview.local.Requests[floor][buttonType] = elevator.ReqNone
+				} else {
+					worldview.local.Requests[floor][buttonType] += 1
+				}
 			}
 		}
 	}
@@ -73,22 +76,26 @@ func UpdateWorldView(worldview *WorldView, message network.Msg) {
 
 	AddElevator(worldview, message)
 
-	//Id must be int, Status must be bool, Elevator must be elevator.Elevator
+	//Id must be string, Status must be bool, Elevator must be elevator.Elevator
 }
 
-func AddElevator(worldview *WorldView) {
+func AddElevator(worldview *WorldView, message network.Msg) {
 
-	worldview.Elevators[id] = ExternalElevator{
-		Status:   true,
-		Elevator: elevator,
+	worldview.Elevators[message.Id] = ExternalElevator{
+		Status: true,
+		Elevator: elevator.Elevator{
+			Floor:     message.Floor,
+			Dirn:      message.Dirn,
+			Requests:  message.Requests,
+			Behaviour: message.Behaviour,
+		},
 	}
 
 	worldview.OnlineElevators += 1
 
-	//denne funksjonen fungerer ikke, men mer eller mindre en plassholder for å legge til en ny elevator.
 }
 
-func HandleTimeout(status *bool) {
+func HandleLocalTimeout(status *bool) {
 	*status = false
 }
 
@@ -97,7 +104,32 @@ func ResetLocalTimeout(timer *time.Timer) {
 }
 
 func UpdateLocal(worldview *WorldView, local elevator.Elevator) {
-	worldview.local = local
+	worldview.local.Floor = local.Floor
+	worldview.local.Dirn = local.Dirn
+	worldview.local.Behaviour = local.Behaviour
+
+	for floor := 0; floor < numFloors; floor++ {
+		for button := 0; button < numButtons; button++ {
+			hardwareRequest := local.Requests[floor][button]
+			storedRequest := worldview.local.Requests[floor][button]
+
+			switch storedRequest {
+			case elevator.ReqNone:
+				worldview.local.Requests[floor][button] = hardwareRequest
+
+			case elevator.ReqUnconfirmed:
+				//do nothing
+
+			case elevator.ReqConfirmed:
+				if hardwareRequest == elevator.ReqDeleting {
+					worldview.local.Requests[floor][button] = elevator.ReqDeleting
+				}
+
+			case elevator.ReqDeleting:
+				//do nothing
+			}
+		}
+	}
 }
 
 func ShareLocalStates(out chan ExternalElevator, localstatus bool, local elevator.Elevator) {
@@ -174,6 +206,15 @@ func BuildLocalExecutorElevator(worldview *WorldView) elevator.Elevator {
 }
 
 func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan ExternalElevator, localid string) {
+func SetAllLights(e elevator.Elevator) {
+	for floor := 0; floor < constant.NumFloors; floor++ {
+		for button := 0; button < constant.NumButtons; button++ {
+			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == elevator.ReqConfirmed)
+		}
+	}
+}
+
+func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan ExternalElevator) {
 	//Denne funksjonen skal kjøres i egen gorouting, håndterer worldview, timouts og oppdatering av ordre
 
 	timer := make(chan bool)
@@ -188,7 +229,7 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 	for {
 		select {
 		case <-timer:
-			HandleTimeout(&LocalStatus)
+			HandleLocalTimeout(&LocalStatus)
 
 		case message := <-in:
 
@@ -206,10 +247,14 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 				}
 			} */
 
+			SetAllLights(worldview.local)
+
 		case local := <-hardware:
 			ResetLocalTimeout(timeout)
 			UpdateLocal(&worldview, local)
-			ShareLocalStates(out, LocalStatus, local)		
+			ShareLocalStates(out, LocalStatus, local)
+
+			SetAllLights(worldview.local)
 		}
 	}
 }
