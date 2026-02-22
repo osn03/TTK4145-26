@@ -171,7 +171,7 @@ func Set_up2() {
 	}
 }
 
-/* For å teste kom kan denne main-funk brukes: 
+/* For å teste com kan denne main-funk brukes: 
 
 func main() {
 	var elev1 esm.ExternalElevator
@@ -193,6 +193,12 @@ func main() {
 	Transform_elevator.Set_up1(&elev1)
 
 }
+
+
+#I case a:=<-Rx, blir ut-printen slikt (from 1 vil være id til den noden som sendte): 
+Received message from 1: {Status:true Elevator:{Floor:0 Dirn:1 Requests:[[0 0 0] [0 0 0] [0 0 0] [0 0 0]] Behaviour:0}}
+OBS, sender_id er en string, for å kunne bruke peers.Transmitter. I utgangspunktet ikke krise, men kan også byttes over til int om nødvendig.
+
 */
 
 
