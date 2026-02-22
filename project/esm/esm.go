@@ -29,7 +29,7 @@ func UpdateOrders(worldview *WorldView) {
 
 			allUpdatet := 0
 
-			for id, elev := range worldview.Elevators {
+			for _, elev := range worldview.Elevators {
 
 				if elev.Status == true {
 
@@ -39,13 +39,17 @@ func UpdateOrders(worldview *WorldView) {
 					if localrequest < externalrequest {
 						worldview.local.Requests[floor][buttonType] = externalrequest
 
-					} else if localrequest == externalrequest && localrequest > 0 {
+					} else if localrequest == externalrequest && (localrequest == elevator.ReqUnconfirmed || localrequest == elevator.ReqDeleting) {
 						allUpdatet += 1
 					}
 				}
 			}
 			if allUpdatet == worldview.OnlineElevators {
-				worldview.local.Requests[floor][buttonType] += 1
+				if worldview.local.Requests[floor][buttonType] == elevator.ReqDeleting {
+					worldview.local.Requests[floor][buttonType] = elevator.ReqNone
+				}else {
+					worldview.local.Requests[floor][buttonType] += 1
+				}
 			}
 		}
 	}
@@ -70,22 +74,26 @@ func UpdateWorldView(worldview *WorldView, message network.Msg) {
 
 	AddElevator(worldview, message)
 
-	//Id must be int, Status must be bool, Elevator must be elevator.Elevator
+	//Id must be string, Status must be bool, Elevator must be elevator.Elevator
 }
 
-func AddElevator(worldview *WorldView) {
+func AddElevator(worldview *WorldView, message network.Msg) {
 
-	worldview.Elevators[id] = ExternalElevator{
+	worldview.Elevators[message.Id] = ExternalElevator{
 		Status:   true,
-		Elevator: elevator,
+		Elevator: elevator.Elevator{
+			Floor:     message.Floor,
+			Dirn:      message.Dirn,
+			Requests:  message.Requests,
+			Behaviour: message.Behaviour,
+		},
 	}
 
 	worldview.OnlineElevators += 1
 
-	//denne funksjonen fungerer ikke, men mer eller mindre en plassholder for å legge til en ny elevator.
 }
 
-func HandleTimeout(status *bool) {
+func HandleLocalTimeout(status *bool) {
 	*status = false
 }
 
@@ -117,7 +125,7 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 	for {
 		select {
 		case <-timer:
-			HandleTimeout(&LocalStatus)
+			HandleLocalTimeout(&LocalStatus)
 
 		case message := <-in:
 
