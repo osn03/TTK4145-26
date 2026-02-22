@@ -1,6 +1,8 @@
 package esm
 
 import (
+	network "project/Network"
+	"project/Network/network"
 	"project/constant"
 	"project/elevator"
 	"project/elevio"
@@ -11,15 +13,14 @@ const numFloors int = constant.NumFloors
 const numButtons int = constant.NumButtons
 
 type ExternalElevator struct {
-	status   bool
-	timeout  *time.Timer
-	elevator elevator.Elevator
+	Status   bool
+	Elevator elevator.Elevator
 }
 
 type WorldView struct {
-	Elevators       map[int]ExternalElevator
+	Elevators       map[string]ExternalElevator
 	OnlineElevators int
-	internal		 elevator.Elevator
+	local           elevator.Elevator
 }
 
 func UpdateOrders(worldview *WorldView) {
@@ -30,13 +31,13 @@ func UpdateOrders(worldview *WorldView) {
 
 			for id, elev := range worldview.Elevators {
 
-				if elev.status == true {
+				if elev.Status == true {
 
-					localrequest := worldview.internal.Requests[floor][buttonType]
-					externalrequest := elev.elevator.Requests[floor][buttonType]
+					localrequest := worldview.local.Requests[floor][buttonType]
+					externalrequest := elev.Elevator.Requests[floor][buttonType]
 
 					if localrequest < externalrequest {
-						worldview.internal.Requests[floor][buttonType] = externalrequest
+						worldview.local.Requests[floor][buttonType] = externalrequest
 
 					} else if localrequest == externalrequest && localrequest > 0 {
 						allUpdatet += 1
@@ -44,38 +45,39 @@ func UpdateOrders(worldview *WorldView) {
 				}
 			}
 			if allUpdatet == worldview.OnlineElevators {
-				worldview.internal.Requests[floor][buttonType] += 1
+				worldview.local.Requests[floor][buttonType] += 1
 			}
 		}
 	}
 }
 
-func UpdateWorldView(worldview *WorldView, extelevator ExternalElevator, id int, out chan<- int) {
+func UpdateWorldView(worldview *WorldView, message network.Msg) {
 
-	if existing, ok := worldview.Elevators[id]; ok {
+	if existing, ok := worldview.Elevators[message.Id]; ok {
 
-		existing.elevator = extelevator.elevator
-		existing.status = extelevator.status
+		existing.Elevator = elevator.Elevator{
+			Floor:     message.Floor,
+			Dirn:      message.Dirn,
+			Requests:  message.Requests,
+			Behaviour: message.Behaviour,
+		}
 
-		worldview.Elevators[id] = existing
+		existing.Status = message.Status
+
+		worldview.Elevators[message.Id] = existing
 		return
 	}
 
-	AddElevator(worldview, id, extelevator.elevator, out)
+	AddElevator(worldview, message)
 
 	//Id must be int, Status must be bool, Elevator must be elevator.Elevator
 }
 
-func AddElevator(worldview *WorldView, id int, elevator elevator.Elevator, out chan<- int) {
-
-	timeout := time.AfterFunc(constant.NetworkTimeout*time.Millisecond, func() {
-		out <- id
-	})
+func AddElevator(worldview *WorldView) {
 
 	worldview.Elevators[id] = ExternalElevator{
-		status:   true,
-		elevator: elevator,
-		timeout:  timeout,
+		Status:   true,
+		Elevator: elevator,
 	}
 
 	worldview.OnlineElevators += 1
@@ -83,42 +85,50 @@ func AddElevator(worldview *WorldView, id int, elevator elevator.Elevator, out c
 	//denne funksjonen fungerer ikke, men mer eller mindre en plassholder for å legge til en ny elevator.
 }
 
-func HandleTimeout(id int, worldview *WorldView) {
-	worldview.Elevators[id] = ExternalElevator{status: false}
-	worldview.OnlineElevators -= 1
+func HandleTimeout(status *bool) {
+	*status = false
 }
 
-func ResetTimeout(id int, worldview *WorldView) {
-	if existing, ok := worldview.Elevators[id]; ok {
-		existing.timeout.Reset(constant.NetworkTimeout * time.Millisecond)
-	}
+func ResetLocalTimeout(timer *time.Timer) {
+	timer.Reset(constant.LocalTimoutDurationMS * time.Millisecond)
 }
 
+func UpdateLocal(worldview *WorldView, local elevator.Elevator) {
+	worldview.local = local
+}
 
+func ShareLocalStates(out chan ExternalElevator, localstatus bool, local elevator.Elevator) {
+	outmessage := ExternalElevator{Status: localstatus, Elevator: local}
+	out <- outmessage
+}
 
-
-func RunESM(harware chan elevator.Elevator) {
+func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan ExternalElevator) {
 	//Denne funksjonen skal kjøres i egen gorouting, håndterer worldview, timouts og oppdatering av ordre
 
-	timers := make(chan int)
-	heartbeat := make(chan int)
+	timer := make(chan bool)
+
+	timeout := time.AfterFunc(constant.LocalTimoutDurationMS*time.Millisecond, func() {
+		timer <- true
+	})
 
 	var worldview WorldView
+	LocalStatus := true
 
-	select {
-	case id := <-timers:
-		HandleTimeout(id, &worldview)
+	for {
+		select {
+		case <-timer:
+			HandleTimeout(&LocalStatus)
 
-	case message := <-msg:
+		case message := <-in:
 
-		UpdateWorldView(&worldview, message.elevator, message.id, timers)
-		UpdateOrders(&worldview) 
+			UpdateWorldView(&worldview, message)
+			UpdateOrders(&worldview)
+			//kjøre kostfunk for å finne ut hva min heis skal gjøre
 
-	case id := <-heartbeat:
-		ResetTimeout(id, &worldview)
-
-	case local := <-harware:
-		worldview.internal = local
+		case local := <-hardware:
+			ResetLocalTimeout(timeout)
+			UpdateLocal(&worldview, local)
+			ShareLocalStates(out, LocalStatus, local)
+		}
 	}
-
 }

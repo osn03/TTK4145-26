@@ -11,6 +11,15 @@ const numButtons int = constant.NumButtons
 
 
 type ElevatorBehavior int
+
+
+const (
+	EB_Idle ElevatorBehavior = iota
+	EB_DoorOpen
+	EB_Moving
+)
+
+
 type ReqState int
 
 const (
@@ -21,18 +30,10 @@ const (
 )
 
 func ReqIsActive(s ReqState) bool {
-	return s == ReqUnconfirmed || s == ReqConfirmed
-}
-
-func ReqLampOn(s ReqState) bool {
 	return s == ReqConfirmed
 }
 
-const (
-	EB_Idle ElevatorBehavior = iota
-	EB_DoorOpen
-	EB_Moving
-)
+
 
 type Elevator struct {
 	Floor    int
