@@ -1,8 +1,7 @@
 package esm
 
 import (
-	network "project/Network"
-	"project/Network/network"
+	"project/network"
 	"project/constant"
 	"project/elevator"
 	"project/elevio"
@@ -47,7 +46,7 @@ func UpdateOrders(worldview *WorldView) {
 			if allUpdatet == worldview.OnlineElevators {
 				if worldview.local.Requests[floor][buttonType] == elevator.ReqDeleting {
 					worldview.local.Requests[floor][buttonType] = elevator.ReqNone
-				}else {
+				} else {
 					worldview.local.Requests[floor][buttonType] += 1
 				}
 			}
@@ -80,7 +79,7 @@ func UpdateWorldView(worldview *WorldView, message network.Msg) {
 func AddElevator(worldview *WorldView, message network.Msg) {
 
 	worldview.Elevators[message.Id] = ExternalElevator{
-		Status:   true,
+		Status: true,
 		Elevator: elevator.Elevator{
 			Floor:     message.Floor,
 			Dirn:      message.Dirn,
@@ -102,12 +101,45 @@ func ResetLocalTimeout(timer *time.Timer) {
 }
 
 func UpdateLocal(worldview *WorldView, local elevator.Elevator) {
-	worldview.local = local
+	worldview.local.Floor = local.Floor
+	worldview.local.Dirn = local.Dirn
+	worldview.local.Behaviour = local.Behaviour
+
+	for floor := 0; floor < numFloors; floor++ {
+		for button := 0; button < numButtons; button++ {
+			hardwareRequest := local.Requests[floor][button]
+			storedRequest := worldview.local.Requests[floor][button]
+
+			switch storedRequest {
+			case elevator.ReqNone:
+				worldview.local.Requests[floor][button] = hardwareRequest
+
+			case elevator.ReqUnconfirmed:
+				//do nothing
+
+			case elevator.ReqConfirmed:
+				if hardwareRequest == elevator.ReqDeleting {
+					worldview.local.Requests[floor][button] = elevator.ReqDeleting
+				}
+
+			case elevator.ReqDeleting:
+				//do nothing
+			}
+		}
+	}
 }
 
 func ShareLocalStates(out chan ExternalElevator, localstatus bool, local elevator.Elevator) {
 	outmessage := ExternalElevator{Status: localstatus, Elevator: local}
 	out <- outmessage
+}
+
+func SetAllLights(e elevator.Elevator) {
+	for floor := 0; floor < constant.NumFloors; floor++ {
+		for button := 0; button < constant.NumButtons; button++ {
+			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == elevator.ReqConfirmed)
+		}
+	}
 }
 
 func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan ExternalElevator) {
@@ -133,10 +165,14 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 			UpdateOrders(&worldview)
 			//kjøre kostfunk for å finne ut hva min heis skal gjøre
 
+			SetAllLights(worldview.local)
+
 		case local := <-hardware:
 			ResetLocalTimeout(timeout)
 			UpdateLocal(&worldview, local)
 			ShareLocalStates(out, LocalStatus, local)
+
+			SetAllLights(worldview.local)
 		}
 	}
 }
