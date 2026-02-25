@@ -46,13 +46,10 @@ func Transform_back(msg ElMsg) (e types.ExternalElevator, sender_id string) {
 		msg.Sender
 }
 
-func Set_up1(e types.ExternalElevator) (outMsg chan ElMsg, outNoder chan peers.PeerUpdate) {
+func Set_up1(e types.ExternalElevator, id string) (outMsg chan ElMsg, outNoder chan peers.PeerUpdate) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
-	var id string
-
-	flag.StringVar(&id, "id", "", "id of this peer")
-	flag.Parse()
+	
 
 	// ... or alternatively, we can use the Local IP address.
 	// (But since we can run multiple programs on the same PC, we also append the

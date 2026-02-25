@@ -6,6 +6,7 @@ import (
 	"project/elevio"
 	"project/network"
 	"project/types"
+	"project/network/peers"
 	"time"
 )
 
@@ -134,7 +135,18 @@ func SetAllLights(e types.Elevator) {
 	}
 }
 
-func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.ExternalElevator, localid string, fsmKick chan [numFloors][numButtons]types.ReqState) {
+func UpdatePeerStatus(worldview *types.WorldView, status peers.PeerUpdate) {
+	for id, elev := range worldview.Elevators {
+		for _, peer := range status.Lost {
+			if peer == id{
+				elev.Status = false
+				worldview.OnlineElevators -= 1			
+			}
+		}
+	}
+}
+
+func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.ExternalElevator, statusin chan peers.PeerUpdate, localid string, fsmKick chan [numFloors][numButtons]types.ReqState) {
 	//Denne funksjonen skal kjøres i egen gorouting, håndterer worldview, timouts og oppdatering av ordre
 
 	timer := make(chan bool)
@@ -155,7 +167,8 @@ func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.Ex
 
 			UpdateWorldView(&worldview, message)
 			UpdateOrders(&worldview)
-			cost.AssignOrders(&worldview, localid, fsmKick)
+
+			cost.AssignOrders(worldview, localid, fsmKick)
 
 			SetAllLights(worldview.Local)
 
@@ -163,9 +176,15 @@ func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.Ex
 			ResetLocalTimeout(timeout)
 			UpdateLocal(&worldview, local)
 			ShareLocalStates(out, LocalStatus, local)
-			cost.AssignOrders(&worldview, localid, fsmKick)
+
+			cost.AssignOrders(worldview, localid, fsmKick)
 
 			SetAllLights(worldview.Local)
+
+		case status := <-statusin:
+			UpdatePeerStatus(&worldview, status)
+
+			cost.AssignOrders(worldview, localid, fsmKick)
 		}
 	}
 }

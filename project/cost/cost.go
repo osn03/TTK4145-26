@@ -425,7 +425,7 @@ func ComputeAssignments(worldview *types.WorldView, localID string) map[string][
     for f := 0; f < constant.NumFloors; f++ {
         hallReqs[f] = make([]bool, 2)
         for btn := types.ButtonType(0); btn <= types.BT_HallDown; btn++ {
-            hallReqs[f][btn] = elevator.ReqIsActive(worldview.Local.Requests[f][btn])
+            hallReqs[f][btn] = request.ReqIsActive(worldview.Local.Requests[f][btn])
         }
     }
 
@@ -487,12 +487,12 @@ func BuildLocalExecutorRequests(worldview *types.WorldView) [constant.NumFloors]
 	return r
 }
 
-func AssignOrders(worldview *types.WorldView, localid string, fsmKick chan [constant.NumFloors][constant.NumButtons]types.ReqState) {
-	assigned := ComputeAssignments(worldview, localid)
-	changed := ApplyLocalAssignment(worldview, localid, assigned)
+func AssignOrders(worldview types.WorldView, localid string, fsmKick chan [constant.NumFloors][constant.NumButtons]types.ReqState) {
+	assigned := ComputeAssignments(&worldview, localid)
+	changed := ApplyLocalAssignment(&worldview, localid, assigned)
 	if changed {
 		// Build executor view and notify FSM to re-evaluate if it is idle/doorOpen.
-		execE := BuildLocalExecutorRequests(worldview)
+		execE := BuildLocalExecutorRequests(&worldview)
 		select {
 		case fsmKick <- execE:
 		default:
