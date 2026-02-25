@@ -137,75 +137,6 @@ func ShareLocalStates(out chan ExternalElevator, localstatus bool, local elevato
 	out <- outmessage
 }
 
-func ComputeAssignments(worldview *WorldView, localID string) map[string][][]bool {
-    // Build hallReqs
-    hallReqs := make([][]bool, constant.NumFloors)
-    for f := 0; f < constant.NumFloors; f++ {
-        hallReqs[f] = make([]bool, 2)
-        for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
-            hallReqs[f][btn] = elevator.ReqIsActive(worldview.local.Requests[f][btn])
-        }
-    }
-
-    // Build elevatorStates (online + local)
-    states := make(map[string]elevator.Elevator)
-    for id, ext := range worldview.Elevators {
-        if ext.Status {
-            states[id] = ext.Elevator
-        }
-    }
-    states[localID] = worldview.local
-
-    return cost.OptimalHallRequests(hallReqs, states, true)
-}
-
-func ApplyLocalAssignment(worldview *WorldView, localID string, assigned map[string][][]bool) bool {
-    a, ok := assigned[localID]
-    if !ok {
-        // if local missing, treat as all false
-        changed := false
-        for f := 0; f < constant.NumFloors; f++ {
-            for b := 0; b < 2; b++ {
-                if worldview.AssignedLocal[f][b] {
-                    worldview.AssignedLocal[f][b] = false
-                    changed = true
-                }
-            }
-        }
-        return changed
-    }
-
-    changed := false
-    for f := 0; f < constant.NumFloors; f++ {
-        for b := 0; b < 2; b++ {
-            v := a[f][b]
-            if worldview.AssignedLocal[f][b] != v {
-                worldview.AssignedLocal[f][b] = v
-                changed = true
-            }
-        }
-    }
-    return changed
-}
-func BuildLocalExecutorElevator(worldview *WorldView) elevator.Elevator {
-    e := worldview.local // copy
-
-    // Overwrite hall requests with "assigned to me" (as confirmed)
-    for f := 0; f < constant.NumFloors; f++ {
-        for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
-            if worldview.AssignedLocal[f][btn] {
-                e.Requests[f][btn] = elevator.ReqConfirmed
-            } else {
-                // IMPORTANT: do not let unassigned hall affect local motion
-                e.Requests[f][btn] = elevator.ReqNone
-            }
-        }
-    }
-    // Keep cab requests as-is
-    return e
-}
-
-func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan ExternalElevator, localid string) {
 func SetAllLights(e elevator.Elevator) {
 	for floor := 0; floor < constant.NumFloors; floor++ {
 		for button := 0; button < constant.NumButtons; button++ {
@@ -214,7 +145,7 @@ func SetAllLights(e elevator.Elevator) {
 	}
 }
 
-func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan ExternalElevator) {
+func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan ExternalElevator, localid string, fsmKick chan [numFloors][numButtons]ReqState) {
 	//Denne funksjonen skal kjøres i egen gorouting, håndterer worldview, timouts og oppdatering av ordre
 
 	timer := make(chan bool)
@@ -235,17 +166,7 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 
 			UpdateWorldView(&worldview, message)
 			UpdateOrders(&worldview)
-			/* assigned := ComputeAssigments(&worldview, localid)
-			changed := ApplyLocalAssignment(&worldview, localid, assigned)
-			if changed {
-				// Build executor view and notify FSM to re-evaluate if it is idle/doorOpen.
-				execE := BuildLocalExecutorElevator(&worldview)
-				select {
-				case fsmKick <- execE:
-				default:
-					// non-blocking: it's fine to drop if FSM will get another soon
-				}
-			} */
+			cost.AssignOrders(&worldview, localid, fsmKick) 
 
 			SetAllLights(worldview.local)
 
@@ -253,6 +174,7 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 			ResetLocalTimeout(timeout)
 			UpdateLocal(&worldview, local)
 			ShareLocalStates(out, LocalStatus, local)
+			cost.AssignOrders(&worldview, localid, fsmKick) 
 
 			SetAllLights(worldview.local)
 		}

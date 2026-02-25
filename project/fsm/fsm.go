@@ -111,6 +111,7 @@ func OnDoorTimeout(e *elevator.Elevator) {
 	EvaluateMovement(e)
 }
 
+
 //legge til case som registrerer om mottat melding over channel fra esm og velger retning
 func RunLocalElevator(transfer chan elevator.Elevator){
 
