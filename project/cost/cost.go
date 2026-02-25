@@ -425,7 +425,7 @@ func ComputeAssignments(worldview *types.WorldView, localID string) map[string][
     hallReqs := make([][]bool, constant.NumFloors)
     for f := 0; f < constant.NumFloors; f++ {
         hallReqs[f] = make([]bool, 2)
-        for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+        for btn := types.ButtonType(0); btn <= types.BT_HallDown; btn++ {
             hallReqs[f][btn] = elevator.ReqIsActive(worldview.Local.Requests[f][btn])
         }
     }
@@ -475,14 +475,14 @@ func BuildLocalExecutorRequests(worldview *types.WorldView) [constant.NumFloors]
 
 	for f := 0; f < constant.NumFloors; f++ {
 		// Hall
-		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+		for btn := types.ButtonType(0); btn <= types.BT_HallDown; btn++ {
 			if worldview.AssignedLocal[f][btn] {
 				r[f][btn] = types.ReqConfirmed
 			} else {
 				r[f][btn] = types.ReqNone
 			}
 		}
-		r[f][elevio.BT_Cab] = worldview.Local.Requests[f][elevio.BT_Cab]
+		r[f][types.BT_Cab] = worldview.Local.Requests[f][types.BT_Cab]
 	}
 
 	return r
