@@ -56,14 +56,6 @@ func EvaluateMovement(e *types.Elevator) {
 	}
 }
 
-func ClearAllRequests(e *types.Elevator) {
-	for f := 0; f < constant.NumFloors; f++ {
-		for b := types.ButtonType(0); b < constant.NumButtons; b++ {
-			e.Requests[f][b] = types.ReqNone
-		}
-	}
-}
-
 func OnRequestButtonPress(e *types.Elevator, floor int, btnType types.ButtonType) {
 
 	switch e.Requests[floor][btnType] {
@@ -191,7 +183,7 @@ func RunLocalElevator(transfer chan types.Elevator, ordersFromCost chan [constan
 
 		case a := <-ordersFromCost:
 			fmt.Printf("%+v\n", a)
-			ClearAllRequests(&e)
+			
 			e.Requests = a
 			EvaluateMovement(&e)
 			transfer <- e
