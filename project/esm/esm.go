@@ -1,12 +1,14 @@
 package esm
 
 import (
+	"fmt"
 	"project/constant"
 	"project/cost"
+	"project/elevator"
 	"project/elevio"
 	"project/network"
-	"project/types"
 	"project/network/peers"
+	"project/types"
 	"time"
 )
 
@@ -17,7 +19,7 @@ func UpdateOrders(worldview *types.WorldView) {
 	for buttonType := types.ButtonType(0); buttonType < constant.NumButtons; buttonType++ {
 		for floor := 0; floor < constant.NumFloors; floor++ {
 
-			allUpdatet := 0
+			allUpdatet := 1
 
 			for _, elev := range worldview.Elevators {
 
@@ -138,9 +140,9 @@ func SetAllLights(e types.Elevator) {
 func UpdatePeerStatus(worldview *types.WorldView, status peers.PeerUpdate) {
 	for id, elev := range worldview.Elevators {
 		for _, peer := range status.Lost {
-			if peer == id{
+			if peer == id {
 				elev.Status = false
-				worldview.OnlineElevators -= 1			
+				worldview.OnlineElevators -= 1
 			}
 		}
 	}
@@ -155,15 +157,22 @@ func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.Ex
 		timer <- true
 	})
 
-	var worldview types.WorldView
+	worldview := types.WorldView{
+		Elevators:       make(map[string]types.ExternalElevator),
+		OnlineElevators: 1,
+		Local:           types.Elevator{},
+	}
+
 	LocalStatus := true
 
 	for {
 		select {
 		case <-timer:
+			fmt.Println("Local elevator timed out")
 			HandleLocalTimeout(&LocalStatus)
 
 		case message := <-in:
+			fmt.Println("Received network update")
 
 			UpdateWorldView(&worldview, message)
 			UpdateOrders(&worldview)
@@ -173,15 +182,20 @@ func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.Ex
 			SetAllLights(worldview.Local)
 
 		case local := <-hardware:
+			fmt.Println("Received local update")
 			ResetLocalTimeout(timeout)
 			UpdateLocal(&worldview, local)
 			ShareLocalStates(out, LocalStatus, local)
+
+			elevator.ElevatorPrint(worldview.Local)
 
 			cost.AssignOrders(worldview, localid, fsmKick)
 
 			SetAllLights(worldview.Local)
 
 		case status := <-statusin:
+			fmt.Println("Received peer status update")
+
 			UpdatePeerStatus(&worldview, status)
 
 			cost.AssignOrders(worldview, localid, fsmKick)

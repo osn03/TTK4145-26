@@ -1,9 +1,9 @@
 package network
 
 import (
+	"project/constant"
 	"project/network/TransformElevator"
 	"project/network/peers"
-	"project/constant"
 	"project/types"
 )
 
@@ -29,14 +29,12 @@ func TranslateToMsg(elMsg TransformElevator.ElMsg) Msg {
 
 func NetworkCum(in <-chan types.ExternalElevator, outMsg chan<- Msg, outNoder chan<- peers.PeerUpdate, localid string) {
 	a, b := TransformElevator.Set_up1(<-in, localid)
-	go func() {
-		for {
-			select {
-			case msg := <-a:
-				outMsg <- TranslateToMsg(msg)
-			case noder := <-b:
-				outNoder <- noder
-			}
+	for {
+		select {
+		case msg := <-a:
+			outMsg <- TranslateToMsg(msg)
+		case noder := <-b:
+			outNoder <- noder
 		}
-	}()
+	}
 }

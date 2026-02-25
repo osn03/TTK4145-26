@@ -67,12 +67,20 @@ func ElevatorPrint(e types.Elevator) {
 			if (f == constant.NumFloors-1 && btn == int(types.BT_HallUp)) ||
 				(f == 0 && btn == int(types.BT_HallDown)) {
 				fmt.Print("|     ")
-			} else {
-				if e.Requests[f][btn] > 0 {
-					fmt.Print("|  #  ")
-				} else {
-					fmt.Print("|  -  ")
-				}
+				continue
+			}
+
+			switch e.Requests[f][btn] {
+			case types.ReqNone:
+				fmt.Print("|  -  ")
+			case types.ReqUnconfirmed:
+				fmt.Print("|  ?  ")
+			case types.ReqConfirmed:
+				fmt.Print("|  #  ")
+			case types.ReqDeleting:
+				fmt.Print("|  x  ")
+			default:
+				fmt.Print("|  !  ") // ukjent verdi -> bug
 			}
 		}
 		fmt.Println("|")

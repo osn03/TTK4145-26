@@ -16,7 +16,7 @@ func main() {
 	//numElevs := constant.NumElevators
 	localid := "150"
 
-	elevio.Init(localid, numFloors)
+	elevio.Init("localhost:15657", numFloors)
 
 	outNetwork := make(chan types.ExternalElevator)
 	elevatorin := make(chan network.Msg)
