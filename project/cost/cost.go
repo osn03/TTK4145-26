@@ -6,6 +6,7 @@ import (
 	"project/elevio"
 	"project/request"
 	"sort"
+	"project/types"
 )
 
 //
@@ -24,7 +25,7 @@ type Req struct {
 
 type State struct {
 	ID    string
-	State elevator.Elevator
+	State types.Elevator
 	Time  int64
 }
 
@@ -39,7 +40,7 @@ type State struct {
 // If includeCab is true, the returned matrix includes a third column with the elevator's current cab requests.
 func OptimalHallRequests(
 	hallReqs [][]bool,
-	elevatorStates map[string]elevator.Elevator,
+	elevatorStates map[string]types.Elevator,
 	includeCab bool,
 ) map[string][][]bool {
 
@@ -56,7 +57,7 @@ func OptimalHallRequests(
 		if s.Floor < 0 || s.Floor >= numFloors {
 			panic("Elevator at invalid floor")
 		}
-		if s.Behaviour == elevator.EB_Moving {
+		if s.Behaviour == types.EB_Moving {
 			next := s.Floor + int(s.Dirn)
 			if next < 0 || next >= numFloors {
 				panic("Elevator " + id + " is moving out of bounds")
@@ -160,7 +161,7 @@ func toReq(hallReqs [][]bool) [][]Req {
 
 // initialStates creates a deterministic slice of simulation states, sorted by elevator ID,
 // and seeds each elevator with a small increasing initial Time to enforce lexicographic tie-breaking.
-func initialStates(states map[string]elevator.Elevator) []State {
+func initialStates(states map[string]types.Elevator) []State {
 	ids := make([]string, 0, len(states))
 	for id := range states {
 		ids = append(ids, id)
@@ -179,8 +180,8 @@ func initialStates(states map[string]elevator.Elevator) []State {
 }
 
 
-func copyState(s elevator.Elevator) elevator.Elevator {
-	return elevator.Elevator{
+func copyState(s types.Elevator) types.Elevator {
+	return types.Elevator{
 		Behaviour: s.Behaviour,
 		Floor:     s.Floor,
 		Dirn:      s.Dirn,
@@ -220,11 +221,11 @@ func performInitialMove(s *State, reqs [][]Req) {
 
 	switch s.State.Behaviour {
 
-	case elevator.EB_DoorOpen:
+	case types.EB_DoorOpen:
 		s.Time += constant.DoorOpenDurationMS / 2
 		fallthrough
 
-	case elevator.EB_Idle:
+	case types.EB_Idle:
 		for btn := 0; btn < 2; btn++ {
 			if reqs[s.State.Floor][btn].Active && reqs[s.State.Floor][btn].AssignedTo == "" {
 				reqs[s.State.Floor][btn].AssignedTo = s.ID
@@ -232,11 +233,11 @@ func performInitialMove(s *State, reqs [][]Req) {
 			}
 		}
 
-	case elevator.EB_Moving:
+	case types.EB_Moving:
 		next := s.State.Floor + int(s.State.Dirn)
 		if next < 0 || next >= numFloors {
 			s.State.Dirn = elevio.MD_Stop
-			s.State.Behaviour = elevator.EB_Idle
+			s.State.Behaviour = types.EB_Idle
 			return
 		}
 		s.State.Floor = next
@@ -265,29 +266,29 @@ func performSingleMove(s *State, reqs [][]Req) {
 		case elevio.BT_HallUp, elevio.BT_HallDown:
 			reqs[s.State.Floor][int(btn)].AssignedTo = s.ID
 		case elevio.BT_Cab:
-			s.State.Requests[s.State.Floor][elevio.BT_Cab] = elevator.ReqDeleting
+			s.State.Requests[s.State.Floor][elevio.BT_Cab] = types.ReqDeleting
 		}
 	}
 
 	switch s.State.Behaviour {
 
-	case elevator.EB_Moving:
+	case types.EB_Moving:
 		if request.ShouldStop(e) {
 			e = request.ClearAtCurrentFloorWithCallback(e, onClearRequest)
-			s.State.Behaviour = elevator.EB_DoorOpen
+			s.State.Behaviour = types.EB_DoorOpen
 			s.Time += constant.DoorOpenDurationMS
 		} else {
 			next := s.State.Floor + int(s.State.Dirn)
 			if next < 0 || next >= numFloors {
 				s.State.Dirn = elevio.MD_Stop
-				s.State.Behaviour = elevator.EB_Idle
+				s.State.Behaviour = types.EB_Idle
 				return
 			}
 			s.State.Floor = next
 			s.Time += constant.TravelDurationMS
 		}
 
-	case elevator.EB_Idle, elevator.EB_DoorOpen:
+	case types.EB_Idle, types.EB_DoorOpen:
 		pair := request.ChooseDirection(e)
 		s.State.Dirn = pair.Dirn
 
@@ -295,19 +296,19 @@ func performSingleMove(s *State, reqs [][]Req) {
 			if request.Here(e) {
 				e = request.ClearAtCurrentFloorWithCallback(e, onClearRequest)
 				s.Time += constant.DoorOpenDurationMS
-				s.State.Behaviour = elevator.EB_DoorOpen
+				s.State.Behaviour = types.EB_DoorOpen
 			} else {
-				s.State.Behaviour = elevator.EB_Idle
+				s.State.Behaviour = types.EB_Idle
 			}
 		} else {
 			next := s.State.Floor + int(s.State.Dirn)
 			if next < 0 || next >= numFloors {
 				s.State.Dirn = elevio.MD_Stop
-				s.State.Behaviour = elevator.EB_Idle
+				s.State.Behaviour = types.EB_Idle
 				return
 			}
 
-			s.State.Behaviour = elevator.EB_Moving
+			s.State.Behaviour = types.EB_Moving
 			s.State.Floor = next
 			s.Time += constant.TravelDurationMS
 		}
@@ -321,7 +322,7 @@ func performSingleMove(s *State, reqs [][]Req) {
 //
 
 
-func elevatorHasAnyCab(e elevator.Elevator) bool {
+func elevatorHasAnyCab(e types.Elevator) bool {
 	for f := 0; f < constant.NumFloors; f++ {
 		if elevator.ReqIsActive(e.Requests[f][elevio.BT_Cab]) {
 			return true
@@ -404,8 +405,8 @@ func assignImmediate(reqs [][]Req, states []State) {
 // withUnassignedRequests builds a temporary elevator snapshot for decision logic, containing:
 // - all cab requests from the elevator state
 // - hall requests that are either unassigned or already assigned to this elevator ID.
-func withUnassignedRequests(s State, reqs [][]Req) elevator.Elevator {
-	var e elevator.Elevator
+func withUnassignedRequests(s State, reqs [][]Req) types.Elevator {
+	var e types.Elevator
 	e.Floor = s.State.Floor
 	e.Dirn = s.State.Dirn
 	e.Behaviour = s.State.Behaviour
@@ -420,7 +421,7 @@ func withUnassignedRequests(s State, reqs [][]Req) elevator.Elevator {
 		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
 			r := reqs[f][int(btn)]
 			if r.Active && (r.AssignedTo == "" || r.AssignedTo == s.ID) {
-				e.Requests[f][btn] = elevator.ReqConfirmed
+				e.Requests[f][btn] = types.ReqConfirmed
 			}
 		}
 	}

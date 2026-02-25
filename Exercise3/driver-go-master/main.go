@@ -3,14 +3,13 @@ package main
 import (
 	"Driver-go/elevio"
 	"fmt"
-	"fsm"
 )
 
 func main() {
 
 	numFloors := 4
 
-	elevio.Init("localhost:15657", numFloors)
+	elevio.Init("Localhost:15657", numFloors)
 
 	var d elevio.MotorDirection = elevio.MD_Up
 	//elevio.SetMotorDirection(d)
