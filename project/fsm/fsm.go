@@ -134,7 +134,7 @@ func RunLocalElevator(transfer chan elevator.Elevator){
 		select {
 		case a := <-drv_buttons:
 			fmt.Printf("%+v\n", a)
-			elevio.SetButtonLamp(a.Button, a.Floor, true)
+			
 			OnRequestButtonPress(&e, a.Floor, a.Button)
 
 			transfer <- e

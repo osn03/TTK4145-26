@@ -38,7 +38,7 @@ func UpdateOrders(worldview *WorldView) {
 					localrequest := worldview.local.Requests[floor][buttonType]
 					externalrequest := elev.Elevator.Requests[floor][buttonType]
 
-					if localrequest < externalrequest {
+					if localrequest < externalrequest && !(localrequest == elevator.ReqUnconfirmed && externalrequest == elevator.ReqDeleting) {
 						worldview.local.Requests[floor][buttonType] = externalrequest
 
 					} else if localrequest == externalrequest && (localrequest == elevator.ReqUnconfirmed || localrequest == elevator.ReqDeleting) {
@@ -49,8 +49,8 @@ func UpdateOrders(worldview *WorldView) {
 			if allUpdatet == worldview.OnlineElevators {
 				if worldview.local.Requests[floor][buttonType] == elevator.ReqDeleting {
 					worldview.local.Requests[floor][buttonType] = elevator.ReqNone
-				} else {
-					worldview.local.Requests[floor][buttonType] += 1
+				} else if worldview.local.Requests[floor][buttonType] == elevator.ReqUnconfirmed {
+					worldview.local.Requests[floor][buttonType] = elevator.ReqConfirmed
 				}
 			}
 		}
@@ -115,7 +115,9 @@ func UpdateLocal(worldview *WorldView, local elevator.Elevator) {
 
 			switch storedRequest {
 			case elevator.ReqNone:
-				worldview.local.Requests[floor][button] = hardwareRequest
+				if hardwareRequest != elevator.ReqUnconfirmed {
+					worldview.local.Requests[floor][button] = elevator.ReqConfirmed
+				}
 
 			case elevator.ReqUnconfirmed:
 				//do nothing
@@ -205,7 +207,7 @@ func BuildLocalExecutorElevator(worldview *WorldView) elevator.Elevator {
     return e
 }
 
-func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan ExternalElevator, localid string) {
+
 func SetAllLights(e elevator.Elevator) {
 	for floor := 0; floor < constant.NumFloors; floor++ {
 		for button := 0; button < constant.NumButtons; button++ {
