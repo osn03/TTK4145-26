@@ -8,10 +8,14 @@ import (
 	"project/elevio"
 	"project/esm"
 	"project/fsm"
+	"flag"
 )
 
 func main() {
 
+	var id string
+	flag.StringVar(&id, "id", "", "peer id")
+	flag.Parse()
 	numFloors := constant.NumFloors
 	//numElevs := constant.NumElevators
 

@@ -23,10 +23,9 @@ func OnInitBetweenFloors(e *elevator.Elevator) {
 	e.Behaviour = elevator.EB_Moving
 }
 
-
 // EvaluateMovement decides what the local elevator should do next given its current request state.
 // Call this after assignments are updated (network merge) and from OnDoorTimeout when door closes.
-//trur kanskje denne må brukes i network?
+// trur kanskje denne må brukes i network?
 func EvaluateMovement(e *elevator.Elevator) {
 	if e.Behaviour == elevator.EB_Moving {
 		return
@@ -52,7 +51,6 @@ func EvaluateMovement(e *elevator.Elevator) {
 		elevio.SetDoorOpenLamp(true)
 		timer.Start(constant.DoorOpenDurationMS)
 
-		
 		*e = request.ClearAtCurrentFloor(*e)
 
 		SetAllLights(*e)
@@ -118,10 +116,12 @@ func OnDoorTimeout(e *elevator.Elevator) {
 	EvaluateMovement(e)
 }
 
-//legge til case som registrerer om mottat melding over channel fra esm og velger retning
-func RunLocalElevator(transfer chan elevator.Elevator){
+// legge til case som registrerer om mottat melding over channel fra esm og velger retning
+func RunLocalElevator(transfer chan elevator.Elevator, ordersFromCost chan [constant.NumFloors][constant.NumButtons]elevator.ReqState) {
 
 	var e elevator.Elevator
+
+	var orderElevator elevator.Elevator
 
 	OnInitBetweenFloors(&e)
 
@@ -141,7 +141,7 @@ func RunLocalElevator(transfer chan elevator.Elevator){
 		select {
 		case a := <-drv_buttons:
 			fmt.Printf("%+v\n", a)
-			elevio.SetButtonLamp(a.Button, a.Floor, true)
+
 			OnRequestButtonPress(&e, a.Floor, a.Button)
 
 			transfer <- e
@@ -188,6 +188,13 @@ func RunLocalElevator(transfer chan elevator.Elevator){
 			}
 			transfer <- e
 
+		case a := <-ordersFromCost:
+			fmt.Printf("%+v\n", a)
+			orderElevator.Requests = a
+			e.Requests = a
+
+			transfer <- e
 		}
+
 	}
 }

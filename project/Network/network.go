@@ -29,8 +29,8 @@ func TranslateToMsg(elMsg TransformElevator.ElMsg) Msg {
 	}
 }
 
-func NetworkCum(in <-chan esm.ExternalElevator, outMsg chan<- Msg, outNoder chan<- peers.PeerUpdate) {
-	a, b := TransformElevator.Set_up1(<-in)
+func NetworkCum(in <-chan esm.ExternalElevator, outMsg chan<- Msg, outNoder chan<- peers.PeerUpdate, id string) {
+	a, b := TransformElevator.Set_up1(<-in, id)
 	go func() {
 		for {
 			select {
