@@ -22,7 +22,7 @@ func main() {
 	statusin := make(chan peers.PeerUpdate)
 	local := make(chan elevator.Elevator)
 
-	go network.NetworkCum(out, elevatorin, statusin)
+	go network.NetworkCum(out, elevatorin, statusin, id)
 	go fsm.RunLocalElevator(local)
 	//go esm.RunESM(local, in, out)
 
