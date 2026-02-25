@@ -56,15 +56,30 @@ func EvaluateMovement(e *types.Elevator) {
 	}
 }
 
-func OnRequestButtonPress(e *types.Elevator, floor int, btnType types.ButtonType) {
+func ClearAllRequests(e *elevator.Elevator) {
+	for f := 0; f < constant.NumFloors; f++ {
+		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
+			e.Requests[f][b] = elevator.ReqNone
+		}
+	}
+}
+
+func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.ButtonType) {
 
 	switch e.Requests[floor][btnType] {
-	case types.ReqNone, types.ReqDeleting:
-		e.Requests[floor][btnType] = types.ReqUnconfirmed
-	default:
-		// already active (unconfirmed/confirmed), do nothing
+	case elevator.ReqNone:
+		e.Requests[floor][btnType] = elevator.ReqUnconfirmed
+		return
+	case elevator.ReqUnconfirmed:
+		e.Requests[floor][btnType] = elevator.ReqUnconfirmed
+		return
+	case elevator.ReqConfirmed:
+		e.Requests[floor][btnType] = elevator.ReqConfirmed
+		return
+	case elevator.ReqDeleting:
+		e.Requests[floor][btnType] = elevator.ReqUnconfirmed
+		return
 	}
-
 }
 
 func OnFloorArrival(e *types.Elevator, newFloor int) {
@@ -105,7 +120,7 @@ func OnDoorTimeout(e *types.Elevator) {
 }
 
 // legge til case som registrerer om mottat melding over channel fra esm og velger retning
-func RunLocalElevator(transfer chan types.Elevator) {
+func RunLocalElevator(transfer chan elevator.Elevator, ordersFromCost chan [constant.NumFloors][constant.NumButtons]elevator.ReqState) {
 
 	var e types.Elevator
 
@@ -174,6 +189,14 @@ func RunLocalElevator(transfer chan types.Elevator) {
 			}
 			transfer <- e
 
+		case a := <-ordersFromCost:
+			fmt.Printf("%+v\n", a)
+			ClearAllRequests(&e)
+			e.Requests = a
+			EvaluateMovement(&e)
+			transfer <- e
+
 		}
+
 	}
 }

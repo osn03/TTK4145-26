@@ -419,3 +419,86 @@ func withUnassignedRequests(s State, reqs [][]Req) types.Elevator {
 
 	return e
 }
+
+
+func ComputeAssignments(worldview *types.WorldView, localID string) map[string][][]bool {
+    // Build hallReqs
+    hallReqs := make([][]bool, constant.NumFloors)
+    for f := 0; f < constant.NumFloors; f++ {
+        hallReqs[f] = make([]bool, 2)
+        for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+            hallReqs[f][btn] = elevator.ReqIsActive(worldview.Local.Requests[f][btn])
+        }
+    }
+
+    // Build elevatorStates (online + local)
+    states := make(map[string]types.Elevator)
+    for id, ext := range worldview.Elevators {
+        if ext.Status {
+            states[id] = ext.Elevator
+        }
+    }
+    states[localID] = worldview.Local
+
+    return OptimalHallRequests(hallReqs, states, true)
+}
+
+func ApplyLocalAssignment(worldview *types.WorldView, localID string, assigned map[string][][]bool) bool {
+    a, ok := assigned[localID]
+    if !ok {
+        // if local missing, treat as all false
+        changed := false
+        for f := 0; f < constant.NumFloors; f++ {
+            for b := 0; b < 2; b++ {
+                if worldview.AssignedLocal[f][b] {
+                    worldview.AssignedLocal[f][b] = false
+                    changed = true
+                }
+            }
+        }
+        return changed
+    }
+
+    changed := false
+    for f := 0; f < constant.NumFloors; f++ {
+        for b := 0; b < 2; b++ {
+            v := a[f][b]
+            if worldview.AssignedLocal[f][b] != v {
+                worldview.AssignedLocal[f][b] = v
+                changed = true
+            }
+        }
+    }
+    return changed
+}
+func BuildLocalExecutorElevator(worldview *types.WorldView) types.Elevator {
+    e := worldview.Local // copy
+
+    // Overwrite hall requests with "assigned to me" (as confirmed)
+    for f := 0; f < constant.NumFloors; f++ {
+        for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+            if worldview.AssignedLocal[f][btn] {
+                e.Requests[f][btn] = types.ReqConfirmed
+            } else {
+                // IMPORTANT: do not let unassigned hall affect local motion
+                e.Requests[f][btn] = types.ReqNone
+            }
+        }
+    }
+    // Keep cab requests as-is
+    return e
+}
+
+func AssignOrders(worldview *types.WorldView, localid string, fsmKick chan [constant.NumFloors][constant.NumButtons]types.ReqState){
+	assigned := ComputeAssignments(worldview, localid)
+	changed := ApplyLocalAssignment(worldview, localid, assigned)
+	if changed {
+		// Build executor view and notify FSM to re-evaluate if it is idle/doorOpen.
+		execE := BuildLocalExecutorElevator(worldview)
+		select {
+		case fsmKick <- execE:
+		default:
+			// non-blocking: it's fine to drop if FSM will get another soon
+		}
+	}
+}
