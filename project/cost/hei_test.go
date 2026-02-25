@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"project/constant"
-	"project/elevator"
 	"project/elevio"
+	"project/types"
 )
 
 // ---- helpers ----
@@ -22,8 +22,8 @@ func hallReqs4(f0up, f0dn, f1up, f1dn, f2up, f2dn, f3up, f3dn bool) [][]bool {
 
 // E builds an elevator state (snapshot) with cab requests set on given floors.
 // Requests are now FSM states (0..3). We mark cab orders as "Confirmed" in tests.
-func E(floor int, dir elevio.MotorDirection, beh elevator.ElevatorBehavior, cabFloors ...int) elevator.Elevator {
-	var e elevator.Elevator
+func E(floor int, dir elevio.MotorDirection, beh types.ElevatorBehavior, cabFloors ...int) types.Elevator {
+	var e types.Elevator
 	e.Floor = floor
 	e.Dirn = dir
 	e.Behaviour = beh
@@ -32,7 +32,7 @@ func E(floor int, dir elevio.MotorDirection, beh elevator.ElevatorBehavior, cabF
 		if f < 0 || f >= constant.NumFloors {
 			panic("cab floor out of range in test helper")
 		}
-		e.Requests[f][elevio.BT_Cab] = elevator.ReqConfirmed
+		e.Requests[f][elevio.BT_Cab] = types.ReqConfirmed
 	}
 	return e
 }
@@ -87,10 +87,10 @@ func assertHallResult(t *testing.T, got map[string][][]bool, want map[string][][
 // ---- tests mirrored from D ----
 
 func TestOptimalHallRequests_IdleElevatorWins(t *testing.T) {
-	states := map[string]elevator.Elevator{
-		"1": E(0, elevio.MD_Stop, elevator.EB_Idle /* no cab */),
-		"2": E(3, elevio.MD_Down, elevator.EB_DoorOpen, 0 /* cab */),
-		"3": E(2, elevio.MD_Up, elevator.EB_Moving, 0, 3 /* cab */),
+	states := map[string]types.Elevator{
+		"1": E(0, elevio.MD_Stop, types.EB_Idle /* no cab */),
+		"2": E(3, elevio.MD_Down, types.EB_DoorOpen, 0 /* cab */),
+		"3": E(2, elevio.MD_Up, types.EB_Moving, 0, 3 /* cab */),
 	}
 
 	hall := hallReqs4(
@@ -116,9 +116,9 @@ func TestOptimalHallRequests_IdleElevatorWins(t *testing.T) {
 }
 
 func TestOptimalHallRequests_TwoIdleAtEndsClosestEvenWrongDir(t *testing.T) {
-	states := map[string]elevator.Elevator{
-		"1": E(0, elevio.MD_Stop, elevator.EB_Idle),
-		"2": E(3, elevio.MD_Stop, elevator.EB_Idle),
+	states := map[string]types.Elevator{
+		"1": E(0, elevio.MD_Stop, types.EB_Idle),
+		"2": E(3, elevio.MD_Stop, types.EB_Idle),
 	}
 
 	hall := hallReqs4(
@@ -147,9 +147,9 @@ func TestOptimalHallRequests_TwoIdleAtEndsClosestEvenWrongDir(t *testing.T) {
 }
 
 func TestOptimalHallRequests_MovingCloserStillWins(t *testing.T) {
-	states := map[string]elevator.Elevator{
-		"1": E(0, elevio.MD_Up, elevator.EB_Moving),
-		"2": E(3, elevio.MD_Stop, elevator.EB_Idle),
+	states := map[string]types.Elevator{
+		"1": E(0, elevio.MD_Up, types.EB_Moving),
+		"2": E(3, elevio.MD_Stop, types.EB_Idle),
 	}
 
 	hall := hallReqs4(
@@ -178,9 +178,9 @@ func TestOptimalHallRequests_MovingCloserStillWins(t *testing.T) {
 }
 
 func TestOptimalHallRequests_CabAheadChangesDecision(t *testing.T) {
-	states := map[string]elevator.Elevator{
-		"1": E(0, elevio.MD_Stop, elevator.EB_Idle, 2),
-		"2": E(3, elevio.MD_Stop, elevator.EB_Idle),
+	states := map[string]types.Elevator{
+		"1": E(0, elevio.MD_Stop, types.EB_Idle, 2),
+		"2": E(3, elevio.MD_Stop, types.EB_Idle),
 	}
 
 	hall := hallReqs4(
@@ -209,9 +209,9 @@ func TestOptimalHallRequests_CabAheadChangesDecision(t *testing.T) {
 }
 
 func TestOptimalHallRequests_MovingTowardWinsTie(t *testing.T) {
-	states := map[string]elevator.Elevator{
-		"27": E(1, elevio.MD_Down, elevator.EB_Moving),
-		"20": E(1, elevio.MD_Down, elevator.EB_DoorOpen),
+	states := map[string]types.Elevator{
+		"27": E(1, elevio.MD_Down, types.EB_Moving),
+		"20": E(1, elevio.MD_Down, types.EB_DoorOpen),
 	}
 
 	hall := hallReqs4(
@@ -236,10 +236,10 @@ func TestOptimalHallRequests_MovingTowardWinsTie(t *testing.T) {
 }
 
 func TestOptimalHallRequests_LexicographicTieBreak(t *testing.T) {
-	states := map[string]elevator.Elevator{
-		"1": E(1, elevio.MD_Up, elevator.EB_Moving, 0),
-		"2": E(1, elevio.MD_Stop, elevator.EB_Idle, 0),
-		"3": E(1, elevio.MD_Stop, elevator.EB_Idle, 0),
+	states := map[string]types.Elevator{
+		"1": E(1, elevio.MD_Up, types.EB_Moving, 0),
+		"2": E(1, elevio.MD_Stop, types.EB_Idle, 0),
+		"3": E(1, elevio.MD_Stop, types.EB_Idle, 0),
 	}
 
 	hall := hallReqs4(
@@ -269,9 +269,9 @@ func TestOptimalHallRequests_LexicographicTieBreak(t *testing.T) {
 }
 
 func TestOptimalHallRequests_TwoHallSameFloorWithCabAhead_SplitBetweenElevators(t *testing.T) {
-	states := map[string]elevator.Elevator{
-		"1": E(3, elevio.MD_Down, elevator.EB_Moving, 0),
-		"2": E(3, elevio.MD_Down, elevator.EB_Idle),
+	states := map[string]types.Elevator{
+		"1": E(3, elevio.MD_Down, types.EB_Moving, 0),
+		"2": E(3, elevio.MD_Down, types.EB_Idle),
 	}
 
 	hall := hallReqs4(

@@ -4,14 +4,15 @@ import (
 	"project/constant"
 	"project/elevator"
 	"project/elevio"
+	"project/types"
 )
 
 type DirnBehaviourPair struct {
 	Dirn      elevio.MotorDirection
-	Behaviour elevator.ElevatorBehavior
+	Behaviour types.ElevatorBehavior
 }
 
-func Above(e elevator.Elevator) bool {
+func Above(e types.Elevator) bool {
 	for f := e.Floor + 1; f < constant.NumFloors; f++ {
 
 		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
@@ -23,7 +24,7 @@ func Above(e elevator.Elevator) bool {
 	return false
 }
 
-func Below(e elevator.Elevator) bool {
+func Below(e types.Elevator) bool {
 	for f := 0; f < e.Floor; f++ {
 
 		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
@@ -36,7 +37,7 @@ func Below(e elevator.Elevator) bool {
 	return false
 }
 
-func Here(e elevator.Elevator) bool {
+func Here(e types.Elevator) bool {
 	for b := elevio.ButtonType(0); b < 3; b++ {
 		if elevator.ReqIsActive(e.Requests[e.Floor][b]) {
 			return true
@@ -45,46 +46,45 @@ func Here(e elevator.Elevator) bool {
 	return false
 }
 
-func ChooseDirection(e elevator.Elevator) DirnBehaviourPair {
+func ChooseDirection(e types.Elevator) DirnBehaviourPair {
 	switch e.Dirn {
 
 	case elevio.MD_Up:
 		if Above(e) {
-			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_Moving}
+			return DirnBehaviourPair{elevio.MD_Up, types.EB_Moving}
 		} else if Here(e) {
-			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_DoorOpen}
+			return DirnBehaviourPair{elevio.MD_Up, types.EB_DoorOpen}
 		} else if Below(e) {
-			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_Moving}
+			return DirnBehaviourPair{elevio.MD_Down, types.EB_Moving}
 		}
-		return DirnBehaviourPair{elevio.MD_Stop, elevator.EB_Idle}
+		return DirnBehaviourPair{elevio.MD_Stop, types.EB_Idle}
 
 	case elevio.MD_Down:
 		if Below(e) {
-			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_Moving}
+			return DirnBehaviourPair{elevio.MD_Down, types.EB_Moving}
 		} else if Here(e) {
-			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_DoorOpen}
+			return DirnBehaviourPair{elevio.MD_Down, types.EB_DoorOpen}
 		} else if Above(e) {
-			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_Moving}
+			return DirnBehaviourPair{elevio.MD_Up, types.EB_Moving}
 		}
-		return DirnBehaviourPair{elevio.MD_Stop, elevator.EB_Idle}
+		return DirnBehaviourPair{elevio.MD_Stop, types.EB_Idle}
 
 	case elevio.MD_Stop:
 		if Here(e) {
-			return DirnBehaviourPair{elevio.MD_Stop, elevator.EB_DoorOpen}
+			return DirnBehaviourPair{elevio.MD_Stop, types.EB_DoorOpen}
 		} else if Above(e) {
-			return DirnBehaviourPair{elevio.MD_Up, elevator.EB_Moving}
+			return DirnBehaviourPair{elevio.MD_Up, types.EB_Moving}
 		} else if Below(e) {
-			return DirnBehaviourPair{elevio.MD_Down, elevator.EB_Moving}
+			return DirnBehaviourPair{elevio.MD_Down, types.EB_Moving}
 		}
-		return DirnBehaviourPair{elevio.MD_Stop, elevator.EB_Idle}
+		return DirnBehaviourPair{elevio.MD_Stop, types.EB_Idle}
 
 	default:
-		return DirnBehaviourPair{elevio.MD_Stop, elevator.EB_Idle}
+		return DirnBehaviourPair{elevio.MD_Stop, types.EB_Idle}
 	}
 }
 
-
-func ShouldStop(e elevator.Elevator) bool {
+func ShouldStop(e types.Elevator) bool {
 	switch e.Dirn {
 
 	case elevio.MD_Up:
@@ -105,8 +105,7 @@ func ShouldStop(e elevator.Elevator) bool {
 	}
 }
 
-
-func ShouldClearImmediately(e elevator.Elevator, btnFloor int, btnType elevio.ButtonType) bool {
+func ShouldClearImmediately(e types.Elevator, btnFloor int, btnType elevio.ButtonType) bool {
 	return e.Floor == btnFloor &&
 		((e.Dirn == elevio.MD_Up && btnType == elevio.BT_HallUp) ||
 			(e.Dirn == elevio.MD_Down && btnType == elevio.BT_HallDown) ||
@@ -114,7 +113,7 @@ func ShouldClearImmediately(e elevator.Elevator, btnFloor int, btnType elevio.Bu
 			btnType == elevio.BT_Cab)
 }
 
-func ClearAtCurrentFloor(e elevator.Elevator) elevator.Elevator {
+func ClearAtCurrentFloor(e types.Elevator) types.Elevator {
 
 	e.Requests[e.Floor][elevio.BT_Cab] = 0
 
@@ -122,35 +121,33 @@ func ClearAtCurrentFloor(e elevator.Elevator) elevator.Elevator {
 
 	case elevio.MD_Up:
 		if !Above(e) && !elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallUp]) {
-			e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqDeleting
+			e.Requests[e.Floor][elevio.BT_HallDown] = types.ReqDeleting
 		}
-		e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqDeleting	
+		e.Requests[e.Floor][elevio.BT_HallUp] = types.ReqDeleting
 
 	case elevio.MD_Down:
 		if !Below(e) && !elevator.ReqIsActive(e.Requests[e.Floor][elevio.BT_HallDown]) {
-			e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqDeleting
+			e.Requests[e.Floor][elevio.BT_HallUp] = types.ReqDeleting
 		}
-		e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqDeleting
+		e.Requests[e.Floor][elevio.BT_HallDown] = types.ReqDeleting
 
 	case elevio.MD_Stop:
 		fallthrough
 	default:
-		e.Requests[e.Floor][elevio.BT_HallUp] = elevator.ReqDeleting
-		e.Requests[e.Floor][elevio.BT_HallDown] = elevator.ReqDeleting
+		e.Requests[e.Floor][elevio.BT_HallUp] = types.ReqDeleting
+		e.Requests[e.Floor][elevio.BT_HallDown] = types.ReqDeleting
 	}
 
 	return e
 }
 
-
-
-func ClearAtCurrentFloorWithCallback(e elevator.Elevator, onClear func(btn elevio.ButtonType)) elevator.Elevator {
+func ClearAtCurrentFloorWithCallback(e types.Elevator, onClear func(btn elevio.ButtonType)) types.Elevator {
 
 	// Helper: transition active -> deleting (and call onClear once)
 	markDeleting := func(btn elevio.ButtonType) {
 		if elevator.ReqIsActive(e.Requests[e.Floor][btn]) {
 			onClear(btn)
-			e.Requests[e.Floor][btn] = elevator.ReqDeleting
+			e.Requests[e.Floor][btn] = types.ReqDeleting
 		}
 	}
 
