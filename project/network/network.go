@@ -1,10 +1,9 @@
 package network
 
 import (
-	"project/Network/TransformElevator"
-	"project/Network/peers"
+	"project/network/TransformElevator"
+	"project/network/peers"
 	"project/constant"
-	"project/elevio"
 	"project/types"
 )
 
@@ -12,7 +11,7 @@ type Msg struct {
 	Id        string
 	Status    bool
 	Floor     int
-	Dirn      elevio.MotorDirection
+	Dirn      types.MotorDirection
 	Requests  [constant.NumFloors][constant.NumButtons]types.ReqState
 	Behaviour types.ElevatorBehavior
 }

@@ -3,7 +3,6 @@ package elevator
 import (
 	"fmt"
 	"project/constant"
-	"project/elevio"
 	"project/types"
 )
 
@@ -27,26 +26,26 @@ func BehaviorToString(eb types.ElevatorBehavior) string {
 	}
 }
 
-func DirnToString(dirn elevio.MotorDirection) string {
+func DirnToString(dirn types.MotorDirection) string {
 	switch dirn {
-	case elevio.MD_Down:
+	case types.MD_Down:
 		return "Down"
-	case elevio.MD_Up:
+	case types.MD_Up:
 		return "Up"
-	case elevio.MD_Stop:
+	case types.MD_Stop:
 		return "Stop"
 	default:
 		return "undefined direction"
 	}
 }
 
-func ButtonToString(button elevio.ButtonType) string {
+func ButtonToString(button types.ButtonType) string {
 	switch button {
-	case elevio.BT_HallUp:
+	case types.BT_HallUp:
 		return "Hall Up"
-	case elevio.BT_HallDown:
+	case types.BT_HallDown:
 		return "Hall Down"
-	case elevio.BT_Cab:
+	case types.BT_Cab:
 		return "Cab"
 	default:
 		return "undefined button"
@@ -69,8 +68,8 @@ func ElevatorPrint(e types.Elevator) {
 	for f := constant.NumFloors - 1; f >= 0; f-- {
 		fmt.Printf("  | %d", f)
 		for btn := 0; btn < constant.NumButtons; btn++ {
-			if (f == constant.NumFloors-1 && btn == int(elevio.BT_HallUp)) ||
-				(f == 0 && btn == int(elevio.BT_HallDown)) {
+			if (f == constant.NumFloors-1 && btn == int(types.BT_HallUp)) ||
+				(f == 0 && btn == int(types.BT_HallDown)) {
 				fmt.Print("|     ")
 			} else {
 				if e.Requests[f][btn] > 0 {

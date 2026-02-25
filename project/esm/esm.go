@@ -3,7 +3,6 @@ package esm
 import (
 	"project/constant"
 	"project/cost"
-	"project/elevator"
 	"project/elevio"
 	"project/network"
 	"project/types"
@@ -14,7 +13,7 @@ const numFloors int = constant.NumFloors
 const numButtons int = constant.NumButtons
 
 func UpdateOrders(worldview *types.WorldView) {
-	for buttonType := elevio.ButtonType(0); buttonType < constant.NumButtons; buttonType++ {
+	for buttonType := types.ButtonType(0); buttonType < constant.NumButtons; buttonType++ {
 		for floor := 0; floor < constant.NumFloors; floor++ {
 
 			allUpdatet := 0
@@ -127,15 +126,15 @@ func ShareLocalStates(out chan types.ExternalElevator, Localstatus bool, Local t
 	out <- outmessage
 }
 
-func SetAllLights(e elevator.Elevator) {
+func SetAllLights(e types.Elevator) {
 	for floor := 0; floor < constant.NumFloors; floor++ {
 		for button := 0; button < constant.NumButtons; button++ {
-			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == types.ReqConfirmed)
+			elevio.SetButtonLamp(types.ButtonType(button), floor, e.Requests[floor][button] == types.ReqConfirmed)
 		}
 	}
 }
 
-func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan ExternalElevator, localid string, fsmKick chan [numFloors][numButtons]ReqState) {
+func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.ExternalElevator, localid string, fsmKick chan [numFloors][numButtons]types.ReqState) {
 	//Denne funksjonen skal kjøres i egen gorouting, håndterer worldview, timouts og oppdatering av ordre
 
 	timer := make(chan bool)
@@ -156,7 +155,7 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 
 			UpdateWorldView(&worldview, message)
 			UpdateOrders(&worldview)
-			cost.AssignOrders(&worldview, localid, fsmKick) 
+			cost.AssignOrders(&worldview, localid, fsmKick)
 
 			SetAllLights(worldview.Local)
 
@@ -164,7 +163,7 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 			ResetLocalTimeout(timeout)
 			UpdateLocal(&worldview, local)
 			ShareLocalStates(out, LocalStatus, local)
-			cost.AssignOrders(&worldview, localid, fsmKick) 
+			cost.AssignOrders(&worldview, localid, fsmKick)
 
 			SetAllLights(worldview.Local)
 		}

@@ -3,10 +3,9 @@ package TransformElevator
 import (
 	"flag"
 	"fmt"
-	"project/Network/bcast"
-	"project/Network/peers"
+	"project/network/bcast"
+	"project/network/peers"
 	"project/constant"
-	"project/elevio"
 	"project/types"
 	"time"
 )
@@ -19,7 +18,7 @@ type ElMsg struct {
 	Sender    string
 	Status    bool
 	Floor     int
-	Dirn      elevio.MotorDirection
+	Dirn      types.MotorDirection
 	Requests  [constant.NumFloors][constant.NumButtons]types.ReqState
 	Behaviour types.ElevatorBehavior
 }
@@ -39,7 +38,7 @@ func Transform_back(msg ElMsg) (e types.ExternalElevator, sender_id string) {
 			Status: msg.Status,
 			Elevator: types.Elevator{
 				Floor:     msg.Floor,
-				Dirn:      elevio.MotorDirection(msg.Dirn),
+				Dirn:      types.MotorDirection(msg.Dirn),
 				Requests:  msg.Requests,
 				Behaviour: types.ElevatorBehavior(msg.Behaviour),
 			},
