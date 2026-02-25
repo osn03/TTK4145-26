@@ -440,7 +440,7 @@ func ComputeAssignments(worldview *types.WorldView, localID string) map[string][
         }
     }
 
-    // Build elevatorStates (online + local)
+    // Build elevatorStates (online + local) || mulig at dette kan fjernes
     states := make(map[string]types.Elevator)
     for id, ext := range worldview.Elevators {
         if ext.Status {
@@ -480,22 +480,22 @@ func ApplyLocalAssignment(worldview *types.WorldView, localID string, assigned m
     }
     return changed
 }
-func BuildLocalExecutorElevator(worldview *types.WorldView) types.Elevator {
-    e := worldview.Local // copy
+func BuildLocalExecutorRequests(worldview *types.WorldView) [constant.NumFloors][constant.NumButtons]types.ReqState {
+	var r [constant.NumFloors][constant.NumButtons]types.ReqState
 
-    // Overwrite hall requests with "assigned to me" (as confirmed)
-    for f := 0; f < constant.NumFloors; f++ {
-        for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
-            if worldview.AssignedLocal[f][btn] {
-                e.Requests[f][btn] = types.ReqConfirmed
-            } else {
-                // IMPORTANT: do not let unassigned hall affect local motion
-                e.Requests[f][btn] = types.ReqNone
-            }
-        }
-    }
-    // Keep cab requests as-is
-    return e
+	for f := 0; f < constant.NumFloors; f++ {
+		// Hall
+		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+			if worldview.AssignedLocal[f][btn] {
+				r[f][btn] = types.ReqConfirmed
+			} else {
+				r[f][btn] = types.ReqNone
+			}
+		}
+		r[f][elevio.BT_Cab] = worldview.Local.Requests[f][elevio.BT_Cab]
+	}
+
+	return r
 }
 
 func AssignOrders(worldview *types.WorldView, localid string, fsmKick chan [constant.NumFloors][constant.NumButtons]types.ReqState){
@@ -503,7 +503,7 @@ func AssignOrders(worldview *types.WorldView, localid string, fsmKick chan [cons
 	changed := ApplyLocalAssignment(worldview, localid, assigned)
 	if changed {
 		// Build executor view and notify FSM to re-evaluate if it is idle/doorOpen.
-		execE := BuildLocalExecutorElevator(worldview)
+		execE := BuildLocalExecutorRequests(worldview)
 		select {
 		case fsmKick <- execE:
 		default:
