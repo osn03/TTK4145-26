@@ -160,7 +160,7 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 
 			SetAllLights(worldview.Local)
 
-		case Local := <-hardware:
+		case local := <-hardware:
 			ResetLocalTimeout(timeout)
 			UpdateLocal(&worldview, local)
 			ShareLocalStates(out, LocalStatus, local)
