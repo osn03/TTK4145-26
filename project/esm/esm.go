@@ -1,31 +1,19 @@
 package esm
 
 import (
-	"project/network"
 	"project/constant"
+	"project/cost"
 	"project/elevator"
 	"project/elevio"
+	"project/network"
+	"project/types"
 	"time"
-	"project/cost"
 )
 
 const numFloors int = constant.NumFloors
 const numButtons int = constant.NumButtons
 
-type ExternalElevator struct {
-	Status   bool
-	Elevator elevator.Elevator
-}
-
-type WorldView struct {
-	Elevators       map[string]ExternalElevator
-	OnlineElevators int
-	local           elevator.Elevator
-
-	AssignedLocal [constant.NumFloors][2]bool // Vet ikke om vi må ha denne
-}
-
-func UpdateOrders(worldview *WorldView) {
+func UpdateOrders(worldview *types.WorldView) {
 	for buttonType := elevio.ButtonType(0); buttonType < constant.NumButtons; buttonType++ {
 		for floor := 0; floor < constant.NumFloors; floor++ {
 
@@ -35,33 +23,33 @@ func UpdateOrders(worldview *WorldView) {
 
 				if elev.Status == true {
 
-					localrequest := worldview.local.Requests[floor][buttonType]
+					Localrequest := worldview.Local.Requests[floor][buttonType]
 					externalrequest := elev.Elevator.Requests[floor][buttonType]
 
-					if localrequest < externalrequest && !(localrequest == elevator.ReqUnconfirmed && externalrequest == elevator.ReqDeleting) {
-						worldview.local.Requests[floor][buttonType] = externalrequest
+					if Localrequest < externalrequest && !(Localrequest == types.ReqUnconfirmed && externalrequest == types.ReqDeleting) {
+						worldview.Local.Requests[floor][buttonType] = externalrequest
 
-					} else if localrequest == externalrequest && (localrequest == elevator.ReqUnconfirmed || localrequest == elevator.ReqDeleting) {
+					} else if Localrequest == externalrequest && (Localrequest == types.ReqUnconfirmed || Localrequest == types.ReqDeleting) {
 						allUpdatet += 1
 					}
 				}
 			}
 			if allUpdatet == worldview.OnlineElevators {
-				if worldview.local.Requests[floor][buttonType] == elevator.ReqDeleting {
-					worldview.local.Requests[floor][buttonType] = elevator.ReqNone
-				} else if worldview.local.Requests[floor][buttonType] == elevator.ReqUnconfirmed {
-					worldview.local.Requests[floor][buttonType] = elevator.ReqConfirmed
+				if worldview.Local.Requests[floor][buttonType] == types.ReqDeleting {
+					worldview.Local.Requests[floor][buttonType] = types.ReqNone
+				} else if worldview.Local.Requests[floor][buttonType] == types.ReqUnconfirmed {
+					worldview.Local.Requests[floor][buttonType] = types.ReqConfirmed
 				}
 			}
 		}
 	}
 }
 
-func UpdateWorldView(worldview *WorldView, message network.Msg) {
+func UpdateWorldView(worldview *types.WorldView, message network.Msg) {
 
 	if existing, ok := worldview.Elevators[message.Id]; ok {
 
-		existing.Elevator = elevator.Elevator{
+		existing.Elevator = types.Elevator{
 			Floor:     message.Floor,
 			Dirn:      message.Dirn,
 			Requests:  message.Requests,
@@ -79,11 +67,11 @@ func UpdateWorldView(worldview *WorldView, message network.Msg) {
 	//Id must be string, Status must be bool, Elevator must be elevator.Elevator
 }
 
-func AddElevator(worldview *WorldView, message network.Msg) {
+func AddElevator(worldview *types.WorldView, message network.Msg) {
 
-	worldview.Elevators[message.Id] = ExternalElevator{
+	worldview.Elevators[message.Id] = types.ExternalElevator{
 		Status: true,
-		Elevator: elevator.Elevator{
+		Elevator: types.Elevator{
 			Floor:     message.Floor,
 			Dirn:      message.Dirn,
 			Requests:  message.Requests,
@@ -103,120 +91,119 @@ func ResetLocalTimeout(timer *time.Timer) {
 	timer.Reset(constant.LocalTimoutDurationMS * time.Millisecond)
 }
 
-func UpdateLocal(worldview *WorldView, local elevator.Elevator) {
-	worldview.local.Floor = local.Floor
-	worldview.local.Dirn = local.Dirn
-	worldview.local.Behaviour = local.Behaviour
+func UpdateLocal(worldview *types.WorldView, Local types.Elevator) {
+	worldview.Local.Floor = Local.Floor
+	worldview.Local.Dirn = Local.Dirn
+	worldview.Local.Behaviour = Local.Behaviour
 
 	for floor := 0; floor < numFloors; floor++ {
 		for button := 0; button < numButtons; button++ {
-			hardwareRequest := local.Requests[floor][button]
-			storedRequest := worldview.local.Requests[floor][button]
+			hardwareRequest := Local.Requests[floor][button]
+			storedRequest := worldview.Local.Requests[floor][button]
 
 			switch storedRequest {
-			case elevator.ReqNone:
-				if hardwareRequest != elevator.ReqUnconfirmed {
-					worldview.local.Requests[floor][button] = elevator.ReqConfirmed
+			case types.ReqNone:
+				if hardwareRequest != types.ReqUnconfirmed {
+					worldview.Local.Requests[floor][button] = types.ReqConfirmed
 				}
 
-			case elevator.ReqUnconfirmed:
+			case types.ReqUnconfirmed:
 				//do nothing
 
-			case elevator.ReqConfirmed:
-				if hardwareRequest == elevator.ReqDeleting {
-					worldview.local.Requests[floor][button] = elevator.ReqDeleting
+			case types.ReqConfirmed:
+				if hardwareRequest == types.ReqDeleting {
+					worldview.Local.Requests[floor][button] = types.ReqDeleting
 				}
 
-			case elevator.ReqDeleting:
+			case types.ReqDeleting:
 				//do nothing
 			}
 		}
 	}
 }
 
-func ShareLocalStates(out chan ExternalElevator, localstatus bool, local elevator.Elevator) {
-	outmessage := ExternalElevator{Status: localstatus, Elevator: local}
+func ShareLocalStates(out chan types.ExternalElevator, Localstatus bool, Local types.Elevator) {
+	outmessage := types.ExternalElevator{Status: Localstatus, Elevator: Local}
 	out <- outmessage
 }
 
-func ComputeAssignments(worldview *WorldView, localID string) map[string][][]bool {
-    // Build hallReqs
-    hallReqs := make([][]bool, constant.NumFloors)
-    for f := 0; f < constant.NumFloors; f++ {
-        hallReqs[f] = make([]bool, 2)
-        for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
-            hallReqs[f][btn] = elevator.ReqIsActive(worldview.local.Requests[f][btn])
-        }
-    }
+func ComputeAssignments(worldview *types.WorldView, LocalID string) map[string][][]bool {
+	// Build hallReqs
+	hallReqs := make([][]bool, constant.NumFloors)
+	for f := 0; f < constant.NumFloors; f++ {
+		hallReqs[f] = make([]bool, 2)
+		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+			hallReqs[f][btn] = elevator.ReqIsActive(worldview.Local.Requests[f][btn])
+		}
+	}
 
-    // Build elevatorStates (online + local)
-    states := make(map[string]elevator.Elevator)
-    for id, ext := range worldview.Elevators {
-        if ext.Status {
-            states[id] = ext.Elevator
-        }
-    }
-    states[localID] = worldview.local
+	// Build elevatorStates (online + Local)
+	states := make(map[string]types.Elevator)
+	for id, ext := range worldview.Elevators {
+		if ext.Status {
+			states[id] = ext.Elevator
+		}
+	}
+	states[LocalID] = worldview.Local
 
-    return cost.OptimalHallRequests(hallReqs, states, true)
+	return cost.OptimalHallRequests(hallReqs, states, true)
 }
 
-func ApplyLocalAssignment(worldview *WorldView, localID string, assigned map[string][][]bool) bool {
-    a, ok := assigned[localID]
-    if !ok {
-        // if local missing, treat as all false
-        changed := false
-        for f := 0; f < constant.NumFloors; f++ {
-            for b := 0; b < 2; b++ {
-                if worldview.AssignedLocal[f][b] {
-                    worldview.AssignedLocal[f][b] = false
-                    changed = true
-                }
-            }
-        }
-        return changed
-    }
+func ApplyLocalAssignment(worldview *types.WorldView, LocalID string, assigned map[string][][]bool) bool {
+	a, ok := assigned[LocalID]
+	if !ok {
+		// if Local missing, treat as all false
+		changed := false
+		for f := 0; f < constant.NumFloors; f++ {
+			for b := 0; b < 2; b++ {
+				if worldview.AssignedLocal[f][b] {
+					worldview.AssignedLocal[f][b] = false
+					changed = true
+				}
+			}
+		}
+		return changed
+	}
 
-    changed := false
-    for f := 0; f < constant.NumFloors; f++ {
-        for b := 0; b < 2; b++ {
-            v := a[f][b]
-            if worldview.AssignedLocal[f][b] != v {
-                worldview.AssignedLocal[f][b] = v
-                changed = true
-            }
-        }
-    }
-    return changed
+	changed := false
+	for f := 0; f < constant.NumFloors; f++ {
+		for b := 0; b < 2; b++ {
+			v := a[f][b]
+			if worldview.AssignedLocal[f][b] != v {
+				worldview.AssignedLocal[f][b] = v
+				changed = true
+			}
+		}
+	}
+	return changed
 }
-func BuildLocalExecutorElevator(worldview *WorldView) elevator.Elevator {
-    e := worldview.local // copy
+func BuildLocalExecutorElevator(worldview *types.WorldView) types.Elevator {
+	e := worldview.Local // copy
 
-    // Overwrite hall requests with "assigned to me" (as confirmed)
-    for f := 0; f < constant.NumFloors; f++ {
-        for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
-            if worldview.AssignedLocal[f][btn] {
-                e.Requests[f][btn] = elevator.ReqConfirmed
-            } else {
-                // IMPORTANT: do not let unassigned hall affect local motion
-                e.Requests[f][btn] = elevator.ReqNone
-            }
-        }
-    }
-    // Keep cab requests as-is
-    return e
+	// Overwrite hall requests with "assigned to me" (as confirmed)
+	for f := 0; f < constant.NumFloors; f++ {
+		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+			if worldview.AssignedLocal[f][btn] {
+				e.Requests[f][btn] = types.ReqConfirmed
+			} else {
+				// IMPORTANT: do not let unassigned hall affect Local motion
+				e.Requests[f][btn] = types.ReqNone
+			}
+		}
+	}
+	// Keep cab requests as-is
+	return e
 }
 
-
-func SetAllLights(e elevator.Elevator) {
+func SetAllLights(e types.Elevator) {
 	for floor := 0; floor < constant.NumFloors; floor++ {
 		for button := 0; button < constant.NumButtons; button++ {
-			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == elevator.ReqConfirmed)
+			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == types.ReqConfirmed)
 		}
 	}
 }
 
-func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan ExternalElevator) {
+func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.ExternalElevator) {
 	//Denne funksjonen skal kjøres i egen gorouting, håndterer worldview, timouts og oppdatering av ordre
 
 	timer := make(chan bool)
@@ -225,7 +212,7 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 		timer <- true
 	})
 
-	var worldview WorldView
+	var worldview types.WorldView
 	LocalStatus := true
 
 	for {
@@ -237,8 +224,8 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 
 			UpdateWorldView(&worldview, message)
 			UpdateOrders(&worldview)
-			/* assigned := ComputeAssigments(&worldview, localid)
-			changed := ApplyLocalAssignment(&worldview, localid, assigned)
+			/* assigned := ComputeAssigments(&worldview, Localid)
+			changed := ApplyLocalAssignment(&worldview, Localid, assigned)
 			if changed {
 				// Build executor view and notify FSM to re-evaluate if it is idle/doorOpen.
 				execE := BuildLocalExecutorElevator(&worldview)
@@ -249,14 +236,14 @@ func RunESM(hardware chan elevator.Elevator, in chan network.Msg, out chan Exter
 				}
 			} */
 
-			SetAllLights(worldview.local)
+			SetAllLights(worldview.Local)
 
-		case local := <-hardware:
+		case Local := <-hardware:
 			ResetLocalTimeout(timeout)
-			UpdateLocal(&worldview, local)
-			ShareLocalStates(out, LocalStatus, local)
+			UpdateLocal(&worldview, Local)
+			ShareLocalStates(out, LocalStatus, Local)
 
-			SetAllLights(worldview.local)
+			SetAllLights(worldview.Local)
 		}
 	}
 }

@@ -4,9 +4,8 @@ import (
 	"project/Network/TransformElevator"
 	"project/Network/peers"
 	"project/constant"
-	"project/elevator"
-	"project/esm"
 	"project/elevio"
+	"project/types"
 )
 
 type Msg struct {
@@ -14,8 +13,8 @@ type Msg struct {
 	Status    bool
 	Floor     int
 	Dirn      elevio.MotorDirection
-	Requests  [constant.NumFloors][constant.NumButtons]elevator.ReqState
-	Behaviour elevator.ElevatorBehavior
+	Requests  [constant.NumFloors][constant.NumButtons]types.ReqState
+	Behaviour types.ElevatorBehavior
 }
 
 func TranslateToMsg(elMsg TransformElevator.ElMsg) Msg {
@@ -29,7 +28,7 @@ func TranslateToMsg(elMsg TransformElevator.ElMsg) Msg {
 	}
 }
 
-func NetworkCum(in <-chan esm.ExternalElevator, outMsg chan<- Msg, outNoder chan<- peers.PeerUpdate) {
+func NetworkCum(in <-chan types.ExternalElevator, outMsg chan<- Msg, outNoder chan<- peers.PeerUpdate) {
 	a, b := TransformElevator.Set_up1(<-in)
 	go func() {
 		for {

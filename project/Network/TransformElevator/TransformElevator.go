@@ -6,9 +6,8 @@ import (
 	"project/Network/bcast"
 	"project/Network/peers"
 	"project/constant"
-	"project/elevator"
 	"project/elevio"
-	"project/esm"
+	"project/types"
 	"time"
 )
 
@@ -21,11 +20,11 @@ type ElMsg struct {
 	Status    bool
 	Floor     int
 	Dirn      elevio.MotorDirection
-	Requests  [constant.NumFloors][constant.NumButtons]elevator.ReqState
-	Behaviour elevator.ElevatorBehavior
+	Requests  [constant.NumFloors][constant.NumButtons]types.ReqState
+	Behaviour types.ElevatorBehavior
 }
 
-func Transform_elevator(sender_id string, e esm.ExternalElevator) ElMsg {
+func Transform_elevator(sender_id string, e types.ExternalElevator) ElMsg {
 	return ElMsg{
 		Sender:    sender_id,
 		Status:    e.Status,
@@ -35,20 +34,20 @@ func Transform_elevator(sender_id string, e esm.ExternalElevator) ElMsg {
 		Behaviour: e.Elevator.Behaviour,
 	}
 }
-func Transform_back(msg ElMsg) (e esm.ExternalElevator, sender_id string) {
-	return esm.ExternalElevator{
+func Transform_back(msg ElMsg) (e types.ExternalElevator, sender_id string) {
+	return types.ExternalElevator{
 			Status: msg.Status,
-			Elevator: elevator.Elevator{
+			Elevator: types.Elevator{
 				Floor:     msg.Floor,
 				Dirn:      elevio.MotorDirection(msg.Dirn),
 				Requests:  msg.Requests,
-				Behaviour: elevator.ElevatorBehavior(msg.Behaviour),
+				Behaviour: types.ElevatorBehavior(msg.Behaviour),
 			},
 		},
 		msg.Sender
 }
 
-func Set_up1(e esm.ExternalElevator) (outMsg chan ElMsg, outNoder chan peers.PeerUpdate) {
+func Set_up1(e types.ExternalElevator) (outMsg chan ElMsg, outNoder chan peers.PeerUpdate) {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id string
@@ -56,7 +55,7 @@ func Set_up1(e esm.ExternalElevator) (outMsg chan ElMsg, outNoder chan peers.Pee
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
 
-	// ... or alternatively, we can use the local IP address.
+	// ... or alternatively, we can use the Local IP address.
 	// (But since we can run multiple programs on the same PC, we also append the
 	//  process ID)
 	// We make a channel for receiving updates on the id's of the peers that are
@@ -122,7 +121,7 @@ func Set_up2() {
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
 
-	// ... or alternatively, we can use the local IP address.
+	// ... or alternatively, we can use the Local IP address.
 	// (But since we can run multiple programs on the same PC, we also append the
 	//  process ID)
 	// We make a channel for receiving updates on the id's of the peers that are

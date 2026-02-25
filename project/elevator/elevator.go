@@ -2,53 +2,25 @@ package elevator
 
 import (
 	"fmt"
-	"project/elevio"
 	"project/constant"
+	"project/elevio"
+	"project/types"
 )
 
 const numFloors int = constant.NumFloors
 const numButtons int = constant.NumButtons
 
-
-type ElevatorBehavior int
-
-
-const (
-	EB_Idle ElevatorBehavior = iota
-	EB_DoorOpen
-	EB_Moving
-)
-
-
-type ReqState int
-
-const (
-	ReqNone        ReqState = 0
-	ReqUnconfirmed ReqState = 1
-	ReqConfirmed   ReqState = 2
-	ReqDeleting    ReqState = 3
-)
-
-func ReqIsActive(s ReqState) bool {
-	return s == ReqConfirmed
+func ReqIsActive(s types.ReqState) bool {
+	return s == types.ReqConfirmed
 }
 
-
-
-type Elevator struct {
-	Floor    int
-	Dirn     elevio.MotorDirection
-	Requests [numFloors][numButtons]ReqState
-	Behaviour ElevatorBehavior
-}
-
-func BehaviorToString(eb ElevatorBehavior) string {
+func BehaviorToString(eb types.ElevatorBehavior) string {
 	switch eb {
-	case EB_Idle:
+	case types.EB_Idle:
 		return "EB_idle"
-	case EB_DoorOpen:
+	case types.EB_DoorOpen:
 		return "DoorOpen"
-	case EB_Moving:
+	case types.EB_Moving:
 		return "Moving"
 	default:
 		return "undefined behavior"
@@ -81,8 +53,7 @@ func ButtonToString(button elevio.ButtonType) string {
 	}
 }
 
-
-func ElevatorPrint(e Elevator){
+func ElevatorPrint(e types.Elevator) {
 	fmt.Println("  +--------------------+")
 	fmt.Printf(
 		"  |floor = %-2d          |\n"+
