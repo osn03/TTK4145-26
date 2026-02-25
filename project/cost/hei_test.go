@@ -1,12 +1,10 @@
 package cost
 
 import (
+	"project/constant"
+	"project/types"
 	"reflect"
 	"testing"
-
-	"project/constant"
-	"project/elevio"
-	"project/types"
 )
 
 // ---- helpers ----
@@ -22,7 +20,7 @@ func hallReqs4(f0up, f0dn, f1up, f1dn, f2up, f2dn, f3up, f3dn bool) [][]bool {
 
 // E builds an elevator state (snapshot) with cab requests set on given floors.
 // Requests are now FSM states (0..3). We mark cab orders as "Confirmed" in tests.
-func E(floor int, dir elevio.MotorDirection, beh types.ElevatorBehavior, cabFloors ...int) types.Elevator {
+func E(floor int, dir types.MotorDirection, beh types.ElevatorBehavior, cabFloors ...int) types.Elevator {
 	var e types.Elevator
 	e.Floor = floor
 	e.Dirn = dir
@@ -32,7 +30,7 @@ func E(floor int, dir elevio.MotorDirection, beh types.ElevatorBehavior, cabFloo
 		if f < 0 || f >= constant.NumFloors {
 			panic("cab floor out of range in test helper")
 		}
-		e.Requests[f][elevio.BT_Cab] = types.ReqConfirmed
+		e.Requests[f][types.BT_Cab] = types.ReqConfirmed
 	}
 	return e
 }
@@ -45,8 +43,8 @@ func zerosAssignment() [][]bool {
 	return a
 }
 
-func setAssign(a [][]bool, floor int, btn elevio.ButtonType) {
-	if btn != elevio.BT_HallUp && btn != elevio.BT_HallDown {
+func setAssign(a [][]bool, floor int, btn types.ButtonType) {
+	if btn != types.BT_HallUp && btn != types.BT_HallDown {
 		panic("setAssign only supports hall buttons")
 	}
 	a[floor][int(btn)] = true
@@ -88,9 +86,9 @@ func assertHallResult(t *testing.T, got map[string][][]bool, want map[string][][
 
 func TestOptimalHallRequests_IdleElevatorWins(t *testing.T) {
 	states := map[string]types.Elevator{
-		"1": E(0, elevio.MD_Stop, types.EB_Idle /* no cab */),
-		"2": E(3, elevio.MD_Down, types.EB_DoorOpen, 0 /* cab */),
-		"3": E(2, elevio.MD_Up, types.EB_Moving, 0, 3 /* cab */),
+		"1": E(0, types.MD_Stop, types.EB_Idle /* no cab */),
+		"2": E(3, types.MD_Down, types.EB_DoorOpen, 0 /* cab */),
+		"3": E(2, types.MD_Up, types.EB_Moving, 0, 3 /* cab */),
 	}
 
 	hall := hallReqs4(
@@ -105,7 +103,7 @@ func TestOptimalHallRequests_IdleElevatorWins(t *testing.T) {
 	want := map[string][][]bool{
 		"1": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 1, elevio.BT_HallUp)
+			setAssign(a, 1, types.BT_HallUp)
 			return a
 		}(),
 		"2": zerosAssignment(),
@@ -117,8 +115,8 @@ func TestOptimalHallRequests_IdleElevatorWins(t *testing.T) {
 
 func TestOptimalHallRequests_TwoIdleAtEndsClosestEvenWrongDir(t *testing.T) {
 	states := map[string]types.Elevator{
-		"1": E(0, elevio.MD_Stop, types.EB_Idle),
-		"2": E(3, elevio.MD_Stop, types.EB_Idle),
+		"1": E(0, types.MD_Stop, types.EB_Idle),
+		"2": E(3, types.MD_Stop, types.EB_Idle),
 	}
 
 	hall := hallReqs4(
@@ -133,12 +131,12 @@ func TestOptimalHallRequests_TwoIdleAtEndsClosestEvenWrongDir(t *testing.T) {
 	want := map[string][][]bool{
 		"1": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 1, elevio.BT_HallDown)
+			setAssign(a, 1, types.BT_HallDown)
 			return a
 		}(),
 		"2": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 2, elevio.BT_HallUp)
+			setAssign(a, 2, types.BT_HallUp)
 			return a
 		}(),
 	}
@@ -148,8 +146,8 @@ func TestOptimalHallRequests_TwoIdleAtEndsClosestEvenWrongDir(t *testing.T) {
 
 func TestOptimalHallRequests_MovingCloserStillWins(t *testing.T) {
 	states := map[string]types.Elevator{
-		"1": E(0, elevio.MD_Up, types.EB_Moving),
-		"2": E(3, elevio.MD_Stop, types.EB_Idle),
+		"1": E(0, types.MD_Up, types.EB_Moving),
+		"2": E(3, types.MD_Stop, types.EB_Idle),
 	}
 
 	hall := hallReqs4(
@@ -164,12 +162,12 @@ func TestOptimalHallRequests_MovingCloserStillWins(t *testing.T) {
 	want := map[string][][]bool{
 		"1": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 1, elevio.BT_HallDown)
+			setAssign(a, 1, types.BT_HallDown)
 			return a
 		}(),
 		"2": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 2, elevio.BT_HallUp)
+			setAssign(a, 2, types.BT_HallUp)
 			return a
 		}(),
 	}
@@ -179,8 +177,8 @@ func TestOptimalHallRequests_MovingCloserStillWins(t *testing.T) {
 
 func TestOptimalHallRequests_CabAheadChangesDecision(t *testing.T) {
 	states := map[string]types.Elevator{
-		"1": E(0, elevio.MD_Stop, types.EB_Idle, 2),
-		"2": E(3, elevio.MD_Stop, types.EB_Idle),
+		"1": E(0, types.MD_Stop, types.EB_Idle, 2),
+		"2": E(3, types.MD_Stop, types.EB_Idle),
 	}
 
 	hall := hallReqs4(
@@ -195,12 +193,12 @@ func TestOptimalHallRequests_CabAheadChangesDecision(t *testing.T) {
 	want := map[string][][]bool{
 		"1": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 2, elevio.BT_HallUp)
+			setAssign(a, 2, types.BT_HallUp)
 			return a
 		}(),
 		"2": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 1, elevio.BT_HallDown)
+			setAssign(a, 1, types.BT_HallDown)
 			return a
 		}(),
 	}
@@ -210,8 +208,8 @@ func TestOptimalHallRequests_CabAheadChangesDecision(t *testing.T) {
 
 func TestOptimalHallRequests_MovingTowardWinsTie(t *testing.T) {
 	states := map[string]types.Elevator{
-		"27": E(1, elevio.MD_Down, types.EB_Moving),
-		"20": E(1, elevio.MD_Down, types.EB_DoorOpen),
+		"27": E(1, types.MD_Down, types.EB_Moving),
+		"20": E(1, types.MD_Down, types.EB_DoorOpen),
 	}
 
 	hall := hallReqs4(
@@ -226,7 +224,7 @@ func TestOptimalHallRequests_MovingTowardWinsTie(t *testing.T) {
 	want := map[string][][]bool{
 		"27": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 0, elevio.BT_HallUp)
+			setAssign(a, 0, types.BT_HallUp)
 			return a
 		}(),
 		"20": zerosAssignment(),
@@ -237,9 +235,9 @@ func TestOptimalHallRequests_MovingTowardWinsTie(t *testing.T) {
 
 func TestOptimalHallRequests_LexicographicTieBreak(t *testing.T) {
 	states := map[string]types.Elevator{
-		"1": E(1, elevio.MD_Up, types.EB_Moving, 0),
-		"2": E(1, elevio.MD_Stop, types.EB_Idle, 0),
-		"3": E(1, elevio.MD_Stop, types.EB_Idle, 0),
+		"1": E(1, types.MD_Up, types.EB_Moving, 0),
+		"2": E(1, types.MD_Stop, types.EB_Idle, 0),
+		"3": E(1, types.MD_Stop, types.EB_Idle, 0),
 	}
 
 	hall := hallReqs4(
@@ -254,12 +252,12 @@ func TestOptimalHallRequests_LexicographicTieBreak(t *testing.T) {
 	want := map[string][][]bool{
 		"1": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 3, elevio.BT_HallDown)
+			setAssign(a, 3, types.BT_HallDown)
 			return a
 		}(),
 		"2": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 0, elevio.BT_HallUp)
+			setAssign(a, 0, types.BT_HallUp)
 			return a
 		}(),
 		"3": zerosAssignment(),
@@ -270,8 +268,8 @@ func TestOptimalHallRequests_LexicographicTieBreak(t *testing.T) {
 
 func TestOptimalHallRequests_TwoHallSameFloorWithCabAhead_SplitBetweenElevators(t *testing.T) {
 	states := map[string]types.Elevator{
-		"1": E(3, elevio.MD_Down, types.EB_Moving, 0),
-		"2": E(3, elevio.MD_Down, types.EB_Idle),
+		"1": E(3, types.MD_Down, types.EB_Moving, 0),
+		"2": E(3, types.MD_Down, types.EB_Idle),
 	}
 
 	hall := hallReqs4(
@@ -286,12 +284,12 @@ func TestOptimalHallRequests_TwoHallSameFloorWithCabAhead_SplitBetweenElevators(
 	want := map[string][][]bool{
 		"1": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 1, elevio.BT_HallDown)
+			setAssign(a, 1, types.BT_HallDown)
 			return a
 		}(),
 		"2": func() [][]bool {
 			a := zerosAssignment()
-			setAssign(a, 1, elevio.BT_HallUp)
+			setAssign(a, 1, types.BT_HallUp)
 			return a
 		}(),
 	}

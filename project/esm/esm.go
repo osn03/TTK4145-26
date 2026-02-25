@@ -14,7 +14,7 @@ const numFloors int = constant.NumFloors
 const numButtons int = constant.NumButtons
 
 func UpdateOrders(worldview *types.WorldView) {
-	for buttonType := elevio.ButtonType(0); buttonType < constant.NumButtons; buttonType++ {
+	for buttonType := types.ButtonType(0); buttonType < constant.NumButtons; buttonType++ {
 		for floor := 0; floor < constant.NumFloors; floor++ {
 
 			allUpdatet := 0
@@ -130,7 +130,7 @@ func ShareLocalStates(out chan types.ExternalElevator, Localstatus bool, Local t
 func SetAllLights(e elevator.Elevator) {
 	for floor := 0; floor < constant.NumFloors; floor++ {
 		for button := 0; button < constant.NumButtons; button++ {
-			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == types.ReqConfirmed)
+			elevio.SetButtonLamp(types.ButtonType(button), floor, e.Requests[floor][button] == types.ReqConfirmed)
 		}
 	}
 }

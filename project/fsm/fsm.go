@@ -11,8 +11,8 @@ import (
 )
 
 func OnInitBetweenFloors(e *types.Elevator) {
-	elevio.SetMotorDirection(elevio.MD_Down)
-	e.Dirn = elevio.MD_Down
+	elevio.SetMotorDirection(types.MD_Down)
+	e.Dirn = types.MD_Down
 	e.Behaviour = types.EB_Moving
 }
 
@@ -25,9 +25,9 @@ func EvaluateMovement(e *types.Elevator) {
 	}
 
 	if elevio.GetObstruction() {
-		e.Dirn = elevio.MD_Stop
+		e.Dirn = types.MD_Stop
 		e.Behaviour = types.EB_DoorOpen
-		elevio.SetMotorDirection(elevio.MD_Stop)
+		elevio.SetMotorDirection(types.MD_Stop)
 		elevio.SetDoorOpenLamp(true)
 		timer.Start(constant.DoorOpenDurationMS)
 		return
@@ -40,7 +40,7 @@ func EvaluateMovement(e *types.Elevator) {
 	switch e.Behaviour {
 
 	case types.EB_DoorOpen:
-		elevio.SetMotorDirection(elevio.MD_Stop)
+		elevio.SetMotorDirection(types.MD_Stop)
 		elevio.SetDoorOpenLamp(true)
 		timer.Start(constant.DoorOpenDurationMS)
 
@@ -52,7 +52,7 @@ func EvaluateMovement(e *types.Elevator) {
 
 	case types.EB_Idle:
 		elevio.SetDoorOpenLamp(false)
-		elevio.SetMotorDirection(elevio.MD_Stop)
+		elevio.SetMotorDirection(types.MD_Stop)
 	}
 }
 
@@ -92,7 +92,7 @@ func OnFloorArrival(e *types.Elevator, newFloor int) {
 	switch e.Behaviour {
 	case types.EB_Moving:
 		if request.ShouldStop(*e) {
-			elevio.SetMotorDirection(elevio.MD_Stop)
+			elevio.SetMotorDirection(types.MD_Stop)
 
 			elevio.SetDoorOpenLamp(true)
 
@@ -177,9 +177,9 @@ func RunLocalElevator(transfer chan elevator.Elevator, ordersFromCost chan [cons
 		case a := <-drv_stop:
 			fmt.Printf("%+v\n", a)
 			if a {
-				elevio.SetMotorDirection(elevio.MD_Stop)
+				elevio.SetMotorDirection(types.MD_Stop)
 				e.Behaviour = types.EB_Idle
-				e.Dirn = elevio.MD_Stop
+				e.Dirn = types.MD_Stop
 				//sets states to match stopped elevator
 			} else {
 				pair := request.ChooseDirection(e)
