@@ -9,17 +9,15 @@ import (
 	"project/timer"
 )
 
-
 func OnInitBetweenFloors(e *elevator.Elevator) {
 	elevio.SetMotorDirection(elevio.MD_Down)
 	e.Dirn = elevio.MD_Down
 	e.Behaviour = elevator.EB_Moving
 }
 
-
 // EvaluateMovement decides what the local elevator should do next given its current request state.
 // Call this after assignments are updated (network merge) and from OnDoorTimeout when door closes.
-//trur kanskje denne må brukes i network?
+// trur kanskje denne må brukes i network?
 func EvaluateMovement(e *elevator.Elevator) {
 	if e.Behaviour == elevator.EB_Moving {
 		return
@@ -45,10 +43,7 @@ func EvaluateMovement(e *elevator.Elevator) {
 		elevio.SetDoorOpenLamp(true)
 		timer.Start(constant.DoorOpenDurationMS)
 
-		
 		*e = request.ClearAtCurrentFloor(*e)
-
-		
 
 	case elevator.EB_Moving:
 		elevio.SetDoorOpenLamp(false)
@@ -60,16 +55,30 @@ func EvaluateMovement(e *elevator.Elevator) {
 	}
 }
 
+func ClearAllRequests(e *elevator.Elevator) {
+	for f := 0; f < constant.NumFloors; f++ {
+		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
+			e.Requests[f][b] = elevator.ReqNone
+		}
+	}
+}
+
 func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.ButtonType) {
 
 	switch e.Requests[floor][btnType] {
-	case elevator.ReqNone, elevator.ReqDeleting:
+	case elevator.ReqNone:
 		e.Requests[floor][btnType] = elevator.ReqUnconfirmed
-	default:
-		// already active (unconfirmed/confirmed), do nothing
+		return
+	case elevator.ReqUnconfirmed:
+		e.Requests[floor][btnType] = elevator.ReqUnconfirmed
+		return
+	case elevator.ReqConfirmed:
+		e.Requests[floor][btnType] = elevator.ReqConfirmed
+		return
+	case elevator.ReqDeleting:
+		e.Requests[floor][btnType] = elevator.ReqUnconfirmed
+		return
 	}
-
-	
 }
 
 func OnFloorArrival(e *elevator.Elevator, newFloor int) {
@@ -90,8 +99,6 @@ func OnFloorArrival(e *elevator.Elevator, newFloor int) {
 
 			timer.Start(constant.DoorOpenDurationMS)
 
-			
-
 			e.Behaviour = elevator.EB_DoorOpen
 		}
 	default:
@@ -111,8 +118,8 @@ func OnDoorTimeout(e *elevator.Elevator) {
 	EvaluateMovement(e)
 }
 
-//legge til case som registrerer om mottat melding over channel fra esm og velger retning
-func RunLocalElevator(transfer chan elevator.Elevator){
+// legge til case som registrerer om mottat melding over channel fra esm og velger retning
+func RunLocalElevator(transfer chan elevator.Elevator, ordersFromCost chan [constant.NumFloors][constant.NumButtons]elevator.ReqState) {
 
 	var e elevator.Elevator
 
@@ -134,7 +141,7 @@ func RunLocalElevator(transfer chan elevator.Elevator){
 		select {
 		case a := <-drv_buttons:
 			fmt.Printf("%+v\n", a)
-			elevio.SetButtonLamp(a.Button, a.Floor, true)
+
 			OnRequestButtonPress(&e, a.Floor, a.Button)
 
 			transfer <- e
@@ -181,6 +188,14 @@ func RunLocalElevator(transfer chan elevator.Elevator){
 			}
 			transfer <- e
 
+		case a := <-ordersFromCost:
+			fmt.Printf("%+v\n", a)
+			ClearAllRequests(&e)
+			e.Requests = a
+			EvaluateMovement(&e)
+			transfer <- e
+
 		}
+
 	}
 }
