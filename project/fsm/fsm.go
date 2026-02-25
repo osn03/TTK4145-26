@@ -56,28 +56,28 @@ func EvaluateMovement(e *types.Elevator) {
 	}
 }
 
-func ClearAllRequests(e *elevator.Elevator) {
+func ClearAllRequests(e *types.Elevator) {
 	for f := 0; f < constant.NumFloors; f++ {
 		for b := elevio.ButtonType(0); b < constant.NumButtons; b++ {
-			e.Requests[f][b] = elevator.ReqNone
+			e.Requests[f][b] = types.ReqNone
 		}
 	}
 }
 
-func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.ButtonType) {
+func OnRequestButtonPress(e *types.Elevator, floor int, btnType elevio.ButtonType) {
 
 	switch e.Requests[floor][btnType] {
-	case elevator.ReqNone:
-		e.Requests[floor][btnType] = elevator.ReqUnconfirmed
+	case types.ReqNone:
+		e.Requests[floor][btnType] = types.ReqUnconfirmed
 		return
-	case elevator.ReqUnconfirmed:
-		e.Requests[floor][btnType] = elevator.ReqUnconfirmed
+	case types.ReqUnconfirmed:
+		e.Requests[floor][btnType] = types.ReqUnconfirmed
 		return
-	case elevator.ReqConfirmed:
-		e.Requests[floor][btnType] = elevator.ReqConfirmed
+	case types.ReqConfirmed:
+		e.Requests[floor][btnType] = types.ReqConfirmed
 		return
-	case elevator.ReqDeleting:
-		e.Requests[floor][btnType] = elevator.ReqUnconfirmed
+	case types.ReqDeleting:
+		e.Requests[floor][btnType] = types.ReqUnconfirmed
 		return
 	}
 }
@@ -120,7 +120,7 @@ func OnDoorTimeout(e *types.Elevator) {
 }
 
 // legge til case som registrerer om mottat melding over channel fra esm og velger retning
-func RunLocalElevator(transfer chan elevator.Elevator, ordersFromCost chan [constant.NumFloors][constant.NumButtons]elevator.ReqState) {
+func RunLocalElevator(transfer chan types.Elevator, ordersFromCost chan [constant.NumFloors][constant.NumButtons]types.ReqState) {
 
 	var e types.Elevator
 
