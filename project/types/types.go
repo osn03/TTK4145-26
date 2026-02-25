@@ -2,7 +2,22 @@ package types
 
 import (
 	"project/constant"
-	"project/elevio"
+)
+
+type MotorDirection int
+
+const (
+	MD_Up   MotorDirection = 1
+	MD_Down MotorDirection = -1
+	MD_Stop MotorDirection = 0
+)
+
+type ButtonType int
+
+const (
+	BT_HallUp   ButtonType = 0
+	BT_HallDown ButtonType = 1
+	BT_Cab      ButtonType = 2
 )
 
 type ElevatorBehavior int
@@ -37,7 +52,7 @@ type WorldView struct {
 
 type Elevator struct {
 	Floor     int
-	Dirn      elevio.MotorDirection
+	Dirn      MotorDirection
 	Requests  [constant.NumFloors][constant.NumButtons]ReqState
 	Behaviour ElevatorBehavior
 }

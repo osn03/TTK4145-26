@@ -14,7 +14,7 @@ const numFloors int = constant.NumFloors
 const numButtons int = constant.NumButtons
 
 func UpdateOrders(worldview *types.WorldView) {
-	for buttonType := elevio.ButtonType(0); buttonType < constant.NumButtons; buttonType++ {
+	for buttonType := types.ButtonType(0); buttonType < constant.NumButtons; buttonType++ {
 		for floor := 0; floor < constant.NumFloors; floor++ {
 
 			allUpdatet := 0
@@ -132,7 +132,7 @@ func ComputeAssignments(worldview *types.WorldView, LocalID string) map[string][
 	hallReqs := make([][]bool, constant.NumFloors)
 	for f := 0; f < constant.NumFloors; f++ {
 		hallReqs[f] = make([]bool, 2)
-		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+		for btn := types.ButtonType(0); btn <= types.BT_HallDown; btn++ {
 			hallReqs[f][btn] = elevator.ReqIsActive(worldview.Local.Requests[f][btn])
 		}
 	}
@@ -182,7 +182,7 @@ func BuildLocalExecutorElevator(worldview *types.WorldView) types.Elevator {
 
 	// Overwrite hall requests with "assigned to me" (as confirmed)
 	for f := 0; f < constant.NumFloors; f++ {
-		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+		for btn := types.ButtonType(0); btn <= types.BT_HallDown; btn++ {
 			if worldview.AssignedLocal[f][btn] {
 				e.Requests[f][btn] = types.ReqConfirmed
 			} else {
@@ -198,7 +198,7 @@ func BuildLocalExecutorElevator(worldview *types.WorldView) types.Elevator {
 func SetAllLights(e types.Elevator) {
 	for floor := 0; floor < constant.NumFloors; floor++ {
 		for button := 0; button < constant.NumButtons; button++ {
-			elevio.SetButtonLamp(elevio.ButtonType(button), floor, e.Requests[floor][button] == types.ReqConfirmed)
+			elevio.SetButtonLamp(types.ButtonType(button), floor, e.Requests[floor][button] == types.ReqConfirmed)
 		}
 	}
 }

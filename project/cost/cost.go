@@ -3,10 +3,9 @@ package cost
 import (
 	"project/constant"
 	"project/elevator"
-	"project/elevio"
 	"project/request"
-	"sort"
 	"project/types"
+	"sort"
 )
 
 //
@@ -15,13 +14,10 @@ import (
 // ==========================
 //
 
-
 type Req struct {
 	Active     bool
 	AssignedTo string
 }
-
-
 
 type State struct {
 	ID    string
@@ -65,7 +61,6 @@ func OptimalHallRequests(
 		}
 	}
 
-
 	reqs := toReq(hallReqs)
 	states := initialStates(elevatorStates)
 
@@ -101,7 +96,6 @@ func OptimalHallRequests(
 		performSingleMove(&states[0], reqs)
 	}
 
-
 	result := make(map[string][][]bool)
 
 	for id := range elevatorStates {
@@ -116,7 +110,7 @@ func OptimalHallRequests(
 
 			// Optional third column mirrors whether the cab request at that floor is currently active.
 			if includeCab {
-				result[id][f][2] = elevator.ReqIsActive(elevatorStates[id].Requests[f][elevio.BT_Cab])
+				result[id][f][2] = elevator.ReqIsActive(elevatorStates[id].Requests[f][types.BT_Cab])
 			}
 		}
 	}
@@ -173,12 +167,11 @@ func initialStates(states map[string]types.Elevator) []State {
 		result[i] = State{
 			ID:    id,
 			State: copyState(states[id]),
-			Time:  int64(i), 
+			Time:  int64(i),
 		}
 	}
 	return result
 }
-
 
 func copyState(s types.Elevator) types.Elevator {
 	return types.Elevator{
@@ -236,7 +229,7 @@ func performInitialMove(s *State, reqs [][]Req) {
 	case types.EB_Moving:
 		next := s.State.Floor + int(s.State.Dirn)
 		if next < 0 || next >= numFloors {
-			s.State.Dirn = elevio.MD_Stop
+			s.State.Dirn = types.MD_Stop
 			s.State.Behaviour = types.EB_Idle
 			return
 		}
@@ -257,16 +250,15 @@ func performInitialMove(s *State, reqs [][]Req) {
 func performSingleMove(s *State, reqs [][]Req) {
 	numFloors := len(reqs)
 
-	
 	e := withUnassignedRequests(*s, reqs)
 
 	// Callback used by the request-clearing function to mark hall assignments and mutate cab state.
-	onClearRequest := func(btn elevio.ButtonType) {
+	onClearRequest := func(btn types.ButtonType) {
 		switch btn {
-		case elevio.BT_HallUp, elevio.BT_HallDown:
+		case types.BT_HallUp, types.BT_HallDown:
 			reqs[s.State.Floor][int(btn)].AssignedTo = s.ID
-		case elevio.BT_Cab:
-			s.State.Requests[s.State.Floor][elevio.BT_Cab] = types.ReqDeleting
+		case types.BT_Cab:
+			s.State.Requests[s.State.Floor][types.BT_Cab] = types.ReqDeleting
 		}
 	}
 
@@ -280,7 +272,7 @@ func performSingleMove(s *State, reqs [][]Req) {
 		} else {
 			next := s.State.Floor + int(s.State.Dirn)
 			if next < 0 || next >= numFloors {
-				s.State.Dirn = elevio.MD_Stop
+				s.State.Dirn = types.MD_Stop
 				s.State.Behaviour = types.EB_Idle
 				return
 			}
@@ -292,7 +284,7 @@ func performSingleMove(s *State, reqs [][]Req) {
 		pair := request.ChooseDirection(e)
 		s.State.Dirn = pair.Dirn
 
-		if pair.Dirn == elevio.MD_Stop {
+		if pair.Dirn == types.MD_Stop {
 			if request.Here(e) {
 				e = request.ClearAtCurrentFloorWithCallback(e, onClearRequest)
 				s.Time += constant.DoorOpenDurationMS
@@ -303,7 +295,7 @@ func performSingleMove(s *State, reqs [][]Req) {
 		} else {
 			next := s.State.Floor + int(s.State.Dirn)
 			if next < 0 || next >= numFloors {
-				s.State.Dirn = elevio.MD_Stop
+				s.State.Dirn = types.MD_Stop
 				s.State.Behaviour = types.EB_Idle
 				return
 			}
@@ -321,10 +313,9 @@ func performSingleMove(s *State, reqs [][]Req) {
 // ==========================
 //
 
-
 func elevatorHasAnyCab(e types.Elevator) bool {
 	for f := 0; f < constant.NumFloors; f++ {
-		if elevator.ReqIsActive(e.Requests[f][elevio.BT_Cab]) {
+		if elevator.ReqIsActive(e.Requests[f][types.BT_Cab]) {
 			return true
 		}
 	}
@@ -413,12 +404,12 @@ func withUnassignedRequests(s State, reqs [][]Req) types.Elevator {
 
 	// Copy cab requests as-is from the elevator snapshot.
 	for f := 0; f < constant.NumFloors; f++ {
-		e.Requests[f][elevio.BT_Cab] = s.State.Requests[f][elevio.BT_Cab]
+		e.Requests[f][types.BT_Cab] = s.State.Requests[f][types.BT_Cab]
 	}
 
 	// Include hall requests that are unassigned or assigned to this elevator.
 	for f := 0; f < constant.NumFloors; f++ {
-		for btn := elevio.ButtonType(0); btn <= elevio.BT_HallDown; btn++ {
+		for btn := types.ButtonType(0); btn <= types.BT_HallDown; btn++ {
 			r := reqs[f][int(btn)]
 			if r.Active && (r.AssignedTo == "" || r.AssignedTo == s.ID) {
 				e.Requests[f][btn] = types.ReqConfirmed
