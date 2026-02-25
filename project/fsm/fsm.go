@@ -7,25 +7,26 @@ import (
 	"project/elevio"
 	"project/request"
 	"project/timer"
+	"project/types"
 )
 
-func OnInitBetweenFloors(e *elevator.Elevator) {
+func OnInitBetweenFloors(e *types.Elevator) {
 	elevio.SetMotorDirection(elevio.MD_Down)
 	e.Dirn = elevio.MD_Down
-	e.Behaviour = elevator.EB_Moving
+	e.Behaviour = types.EB_Moving
 }
 
-// EvaluateMovement decides what the local elevator should do next given its current request state.
+// EvaluateMovement decides what the Local elevator should do next given its current request state.
 // Call this after assignments are updated (network merge) and from OnDoorTimeout when door closes.
 // trur kanskje denne må brukes i network?
-func EvaluateMovement(e *elevator.Elevator) {
-	if e.Behaviour == elevator.EB_Moving {
+func EvaluateMovement(e *types.Elevator) {
+	if e.Behaviour == types.EB_Moving {
 		return
 	}
 
 	if elevio.GetObstruction() {
 		e.Dirn = elevio.MD_Stop
-		e.Behaviour = elevator.EB_DoorOpen
+		e.Behaviour = types.EB_DoorOpen
 		elevio.SetMotorDirection(elevio.MD_Stop)
 		elevio.SetDoorOpenLamp(true)
 		timer.Start(constant.DoorOpenDurationMS)
@@ -38,18 +39,18 @@ func EvaluateMovement(e *elevator.Elevator) {
 
 	switch e.Behaviour {
 
-	case elevator.EB_DoorOpen:
+	case types.EB_DoorOpen:
 		elevio.SetMotorDirection(elevio.MD_Stop)
 		elevio.SetDoorOpenLamp(true)
 		timer.Start(constant.DoorOpenDurationMS)
 
 		*e = request.ClearAtCurrentFloor(*e)
 
-	case elevator.EB_Moving:
+	case types.EB_Moving:
 		elevio.SetDoorOpenLamp(false)
 		elevio.SetMotorDirection(e.Dirn)
 
-	case elevator.EB_Idle:
+	case types.EB_Idle:
 		elevio.SetDoorOpenLamp(false)
 		elevio.SetMotorDirection(elevio.MD_Stop)
 	}
@@ -81,7 +82,7 @@ func OnRequestButtonPress(e *elevator.Elevator, floor int, btnType elevio.Button
 	}
 }
 
-func OnFloorArrival(e *elevator.Elevator, newFloor int) {
+func OnFloorArrival(e *types.Elevator, newFloor int) {
 	fmt.Printf("\n\nFSMOnFloorArrival(%d)\n", newFloor)
 	elevator.ElevatorPrint(*e)
 
@@ -89,7 +90,7 @@ func OnFloorArrival(e *elevator.Elevator, newFloor int) {
 	elevio.SetFloorIndicator(e.Floor)
 
 	switch e.Behaviour {
-	case elevator.EB_Moving:
+	case types.EB_Moving:
 		if request.ShouldStop(*e) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 
@@ -99,7 +100,7 @@ func OnFloorArrival(e *elevator.Elevator, newFloor int) {
 
 			timer.Start(constant.DoorOpenDurationMS)
 
-			e.Behaviour = elevator.EB_DoorOpen
+			e.Behaviour = types.EB_DoorOpen
 		}
 	default:
 		// Do nothing for other behaviours
@@ -109,8 +110,8 @@ func OnFloorArrival(e *elevator.Elevator, newFloor int) {
 	elevator.ElevatorPrint(*e)
 }
 
-func OnDoorTimeout(e *elevator.Elevator) {
-	if e.Behaviour != elevator.EB_DoorOpen {
+func OnDoorTimeout(e *types.Elevator) {
+	if e.Behaviour != types.EB_DoorOpen {
 		return
 	}
 	elevio.SetDoorOpenLamp(false)
@@ -121,7 +122,7 @@ func OnDoorTimeout(e *elevator.Elevator) {
 // legge til case som registrerer om mottat melding over channel fra esm og velger retning
 func RunLocalElevator(transfer chan elevator.Elevator, ordersFromCost chan [constant.NumFloors][constant.NumButtons]elevator.ReqState) {
 
-	var e elevator.Elevator
+	var e types.Elevator
 
 	OnInitBetweenFloors(&e)
 
@@ -162,7 +163,7 @@ func RunLocalElevator(transfer chan elevator.Elevator, ordersFromCost chan [cons
 
 		case a := <-drv_obstr:
 			fmt.Printf("%+v\n", a)
-			if a && e.Behaviour == elevator.EB_DoorOpen {
+			if a && e.Behaviour == types.EB_DoorOpen {
 				timer.Stop()
 				//state and motordirection remain unchanged
 
@@ -177,7 +178,7 @@ func RunLocalElevator(transfer chan elevator.Elevator, ordersFromCost chan [cons
 			fmt.Printf("%+v\n", a)
 			if a {
 				elevio.SetMotorDirection(elevio.MD_Stop)
-				e.Behaviour = elevator.EB_Idle
+				e.Behaviour = types.EB_Idle
 				e.Dirn = elevio.MD_Stop
 				//sets states to match stopped elevator
 			} else {
