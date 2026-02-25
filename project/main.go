@@ -1,14 +1,14 @@
 package main
 
 import (
-	"project/Network"
+	"flag"
+	network "project/Network"
 	"project/Network/peers"
 	"project/constant"
 	"project/elevator"
 	"project/elevio"
 	"project/esm"
 	"project/fsm"
-	"flag"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 	statusin := make(chan peers.PeerUpdate)
 	local := make(chan elevator.Elevator)
 
-	go network.NetworkCum(out, elevatorin, statusin, id)
+	go network.NetworkCum(out, elevatorin, statusin)
 	go fsm.RunLocalElevator(local)
 	//go esm.RunESM(local, in, out)
 
