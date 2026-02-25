@@ -1,10 +1,13 @@
 package esm
 
 import (
+	"fmt"
 	"project/constant"
 	"project/cost"
+	"project/elevator"
 	"project/elevio"
 	"project/network"
+	"project/network/peers"
 	"project/types"
 	"time"
 )
@@ -16,7 +19,7 @@ func UpdateOrders(worldview *types.WorldView) {
 	for buttonType := types.ButtonType(0); buttonType < constant.NumButtons; buttonType++ {
 		for floor := 0; floor < constant.NumFloors; floor++ {
 
-			allUpdatet := 0
+			allUpdatet := 1
 
 			for _, elev := range worldview.Elevators {
 
@@ -134,7 +137,18 @@ func SetAllLights(e types.Elevator) {
 	}
 }
 
-func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.ExternalElevator, localid string, fsmKick chan [numFloors][numButtons]types.ReqState) {
+func UpdatePeerStatus(worldview *types.WorldView, status peers.PeerUpdate) {
+	for id, elev := range worldview.Elevators {
+		for _, peer := range status.Lost {
+			if peer == id {
+				elev.Status = false
+				worldview.OnlineElevators -= 1
+			}
+		}
+	}
+}
+
+func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.ExternalElevator, statusin chan peers.PeerUpdate, localid string, fsmKick chan [numFloors][numButtons]types.ReqState) {
 	//Denne funksjonen skal kjøres i egen gorouting, håndterer worldview, timouts og oppdatering av ordre
 
 	timer := make(chan bool)
@@ -143,29 +157,48 @@ func RunESM(hardware chan types.Elevator, in chan network.Msg, out chan types.Ex
 		timer <- true
 	})
 
-	var worldview types.WorldView
+	worldview := types.WorldView{
+		Elevators:       make(map[string]types.ExternalElevator),
+		OnlineElevators: 1,
+		Local:           types.Elevator{},
+	}
+
 	LocalStatus := true
 
 	for {
 		select {
 		case <-timer:
+			fmt.Println("Local elevator timed out")
 			HandleLocalTimeout(&LocalStatus)
 
 		case message := <-in:
+			fmt.Println("Received network update")
 
 			UpdateWorldView(&worldview, message)
 			UpdateOrders(&worldview)
-			cost.AssignOrders(&worldview, localid, fsmKick)
+
+			cost.AssignOrders(worldview, localid, fsmKick)
 
 			SetAllLights(worldview.Local)
 
 		case local := <-hardware:
+			fmt.Println("Received local update")
 			ResetLocalTimeout(timeout)
 			UpdateLocal(&worldview, local)
 			ShareLocalStates(out, LocalStatus, local)
-			cost.AssignOrders(&worldview, localid, fsmKick)
+
+			elevator.ElevatorPrint(worldview.Local)
+
+			cost.AssignOrders(worldview, localid, fsmKick)
 
 			SetAllLights(worldview.Local)
+
+		case status := <-statusin:
+			fmt.Println("Received peer status update")
+
+			UpdatePeerStatus(&worldview, status)
+
+			cost.AssignOrders(worldview, localid, fsmKick)
 		}
 	}
 }

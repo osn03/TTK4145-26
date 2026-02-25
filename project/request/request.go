@@ -136,8 +136,12 @@ func ClearAtCurrentFloor(e types.Elevator) types.Elevator {
 	case types.MD_Stop:
 		fallthrough
 	default:
-		e.Requests[e.Floor][types.BT_HallUp] = types.ReqDeleting
-		e.Requests[e.Floor][types.BT_HallDown] = types.ReqDeleting
+		if ReqIsActive(e.Requests[e.Floor][types.BT_HallUp]) {
+			e.Requests[e.Floor][types.BT_HallUp] = types.ReqDeleting
+		}
+		if ReqIsActive(e.Requests[e.Floor][types.BT_HallDown]) {
+			e.Requests[e.Floor][types.BT_HallDown] = types.ReqDeleting
+		}
 	}
 
 	return e
