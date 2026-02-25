@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"project/Network/conn"
+	"project/network/conn"
 	"reflect"
 )
 

@@ -1,8 +1,8 @@
 package network
 
 import (
-	"project/Network/TransformElevator"
-	"project/Network/peers"
+	"project/network/TransformElevator"
+	"project/network/peers"
 	"project/constant"
 	"project/types"
 )

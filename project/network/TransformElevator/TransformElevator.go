@@ -3,8 +3,8 @@ package TransformElevator
 import (
 	"flag"
 	"fmt"
-	"project/Network/bcast"
-	"project/Network/peers"
+	"project/network/bcast"
+	"project/network/peers"
 	"project/constant"
 	"project/types"
 	"time"
