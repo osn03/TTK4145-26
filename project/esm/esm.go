@@ -105,8 +105,8 @@ func UpdateLocal(worldview *types.WorldView, Local types.Elevator) {
 
 			switch storedRequest {
 			case types.ReqNone:
-				if hardwareRequest != types.ReqUnconfirmed {
-					worldview.Local.Requests[floor][button] = types.ReqConfirmed
+				if hardwareRequest == types.ReqUnconfirmed {
+					worldview.Local.Requests[floor][button] = types.ReqUnconfirmed
 				}
 
 			case types.ReqUnconfirmed:

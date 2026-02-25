@@ -65,9 +65,6 @@ func OnRequestButtonPress(e *types.Elevator, floor int, btnType types.ButtonType
 	case types.ReqUnconfirmed:
 		e.Requests[floor][btnType] = types.ReqUnconfirmed
 		return
-	case types.ReqConfirmed:
-		e.Requests[floor][btnType] = types.ReqConfirmed
-		return
 	case types.ReqDeleting:
 		e.Requests[floor][btnType] = types.ReqUnconfirmed
 		return
@@ -183,7 +180,7 @@ func RunLocalElevator(transfer chan types.Elevator, ordersFromCost chan [constan
 
 		case a := <-ordersFromCost:
 			fmt.Printf("%+v\n", a)
-			
+
 			e.Requests = a
 			EvaluateMovement(&e)
 			transfer <- e
