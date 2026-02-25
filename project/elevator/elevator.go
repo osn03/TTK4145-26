@@ -9,10 +9,6 @@ import (
 const numFloors int = constant.NumFloors
 const numButtons int = constant.NumButtons
 
-func ReqIsActive(s types.ReqState) bool {
-	return s == types.ReqConfirmed
-}
-
 func BehaviorToString(eb types.ElevatorBehavior) string {
 	switch eb {
 	case types.EB_Idle:

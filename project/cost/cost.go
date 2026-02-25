@@ -2,7 +2,6 @@ package cost
 
 import (
 	"project/constant"
-	"project/elevator"
 	"project/request"
 	"project/types"
 	"sort"
@@ -110,7 +109,7 @@ func OptimalHallRequests(
 
 			// Optional third column mirrors whether the cab request at that floor is currently active.
 			if includeCab {
-				result[id][f][2] = elevator.ReqIsActive(elevatorStates[id].Requests[f][types.BT_Cab])
+				result[id][f][2] = request.ReqIsActive(elevatorStates[id].Requests[f][types.BT_Cab])
 			}
 		}
 	}
@@ -315,7 +314,7 @@ func performSingleMove(s *State, reqs [][]Req) {
 
 func elevatorHasAnyCab(e types.Elevator) bool {
 	for f := 0; f < constant.NumFloors; f++ {
-		if elevator.ReqIsActive(e.Requests[f][types.BT_Cab]) {
+		if request.ReqIsActive(e.Requests[f][types.BT_Cab]) {
 			return true
 		}
 	}
